@@ -1,0 +1,38 @@
+# Built applications, installers, archives and logs
+*.app/
+*.dmg
+*.zip
+*.o
+*.a
+*.dylib
+*.dSYM/
+*.xcresult/
+*.log
+.build/
+build/
+DerivedData/
+release/
+# Local state, credentials and signing material
+.DS_Store
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*.mobileprovision
+*.provisionprofile
+*.xcuserstate
+xcuserdata/
+# Local caches and personal artifacts
+__pycache__/
+*.pyc
+node_modules/
+work/
+outputs/
+*.png
+*.jpg
+*.jpeg
+*.heic
+*.mov

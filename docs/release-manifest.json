@@ -1,0 +1,26 @@
+[
+  {
+    "asset": "FLYnamic-Island-Music-Only-Apple-Silicon.dmg",
+    "source_directory": "mac-music-only",
+    "bytes": 553838,
+    "sha256": "36ab4f0ab69fc92b821b225d50820cdb69d29cd2aa8a3e123ce6c209a38bf366"
+  },
+  {
+    "asset": "FLYnamic-Island-Music-System-Stats-Apple-Silicon.dmg",
+    "source_directory": "mac-music-system-stats",
+    "bytes": 721049,
+    "sha256": "4bc225cef4e0334140650ee9e6d370f570ecbcc630098cd5db57ca0ce922b3ed"
+  },
+  {
+    "asset": "FLYnamic-Island-Browser-YouTube-Music.dmg",
+    "source_directory": "mac-browser",
+    "bytes": 706953,
+    "sha256": "b8420988a158ba510c24ddfeab83928bf601a3bbbe84edb085b159ad2cf66ca8"
+  },
+  {
+    "asset": "FLYnamic-Island-Intel.dmg",
+    "source_directory": "mac-intel",
+    "bytes": 767726,
+    "sha256": "ec432697d43370343f2ef31fdfc5371ced7389db7d88b5ffcd503bd53651e34c"
+  }
+]
