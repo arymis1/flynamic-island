@@ -1,5 +1,4 @@
 #import <AppKit/AppKit.h>
-#import "AudioMeter.h"
 
 NS_ASSUME_NONNULL_BEGIN
 // Call this object on one serial queue. It uses Music's public scripting interface.

@@ -12,7 +12,6 @@ struct AirPlayOutput: Identifiable {
 }
 
 final class MusicModel: ObservableObject {
-    let visualizer = AudioVisualization()
     @Published private(set) var isMusicRunning = false
     @Published private(set) var source = MediaSource.appleMusic
     var visibilityChanged: ((Bool) -> Void)?
@@ -26,7 +25,6 @@ final class MusicModel: ObservableObject {
     @Published var artworkBackdrop: NSImage?
     var playbackActivityChanged: ((Bool) -> Void)?
     @Published var playing = false { didSet {
-        visualizer.update(playing: playing)
         if oldValue != playing { playbackActivityChanged?(playing) }
     } }
     @Published var favorited = false
@@ -157,9 +155,7 @@ final class MusicModel: ObservableObject {
         guard force || isMusicRunning != running || (selected != nil && selected != source) else { return }
         sessionGeneration += 1
         spotifyArtwork.cancel(); appleArtwork.cancel(); artworkURL = ""
-        visualizer.musicClosed()
         if let selected { source = selected }
-        visualizer.setSource(source.bundleIdentifier, title: source.title)
         isMusicRunning = running
         polling = false; playbackPolling = false
         playbackSync.reset(); playbackCommandInFlight = false; pendingFavorite = nil
@@ -597,18 +593,32 @@ struct ArtView: View {
     }
 }
 
-struct Equalizer: View {
-    var playing: Bool
-    var color: Color
-    @ObservedObject var meter: AudioVisualization
+struct PlaybackBars: View {
+    let playing: Bool
+    let color: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let barRanges: [Double] = [11, 18, 14, 9]
+
     var body: some View {
+        let animating = playing && !reduceMotion
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !animating)) { context in
+            // Two overlapping rhythms give the bars a smooth, staggered motion.
+            let phase = context.date.timeIntervalSinceReferenceDate
+                .truncatingRemainder(dividingBy: 4) * (.pi / 2)
             HStack(spacing: 2.5) {
-                ForEach(0..<4) { index in
-                    Capsule().fill(color).frame(width: 3, height: playing ? max(3, 2 + meter.levels[index] * 20) : 3)
-                        .animation(playing ? .linear(duration: 1.0 / 30.0) : nil, value: meter.levels[index])
+                ForEach(barRanges.indices, id: \.self) { index in
+                    let offset = Double(index)
+                    let level = animating
+                        ? 0.58 + 0.26 * sin(5 * phase - 0.9 * offset) + 0.10 * sin(7 * phase + 1.1 * offset)
+                        : 0.58
+                    Capsule().fill(color)
+                        .frame(width: 3, height: 3 + (playing ? barRanges[index] * level : 0))
                 }
-            }.frame(width: 23, height: 24)
-                .accessibilityLabel(playing ? "Live music levels" : "Paused. Flat dots")
+            }
+            .frame(width: 23, height: 24)
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -702,7 +712,7 @@ struct IslandView: View {
     private var expandedHeight: CGFloat { island.safeTop > 0 ? island.safeTop + 232 : 246 }
     var body: some View {
         ZStack(alignment: .top) {
-            shape.fill(.black)
+            shape.fill(.black.opacity(island.expanded && IslandGlassChrome.isSupported ? 0 : 1))
             VStack(spacing: 0) {
                 Color.clear.frame(height: island.safeTop)
                 ZStack {
@@ -718,9 +728,36 @@ struct IslandView: View {
                 .overlay(LinearGradient(colors: [.black.opacity(0.32), .black.opacity(0.52)], startPoint: .top, endPoint: .bottom))
                 .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .white, location: 0.13), .init(color: .white, location: 1)], startPoint: .top, endPoint: .bottom))
             }.frame(width: 386, height: expandedHeight, alignment: .top)
+                .opacity(IslandGlassChrome.isSupported ? 0.32 : 1)
+                .mask {
+                    if IslandGlassChrome.isSupported {
+                        // Fade the album backing away at the corners so the actual
+                        // desktop behind the glass remains visible there.
+                        RadialGradient(colors: [.white, .white.opacity(0.65), .clear],
+                                       center: .center, startRadius: 40, endRadius: 235)
+                    } else {
+                        Color.white
+                    }
+                }
                 .opacity(island.expanded ? 1 : 0)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
+            if IslandGlassChrome.isSupported {
+                // Quiet center for text; leave the perimeter open to the native material.
+                RadialGradient(colors: [.black.opacity(0.75), .black.opacity(0.40), .clear],
+                               center: .center, startRadius: 30, endRadius: 240)
+                    .opacity(island.expanded ? 1 : 0)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                LinearGradient(stops: [
+                    .init(color: .black, location: 0),
+                    .init(color: .black, location: island.safeTop / expandedHeight),
+                    .init(color: .clear, location: min(1, (island.safeTop + 45) / expandedHeight))
+                ], startPoint: .top, endPoint: .bottom)
+                    .opacity(island.expanded && island.safeTop > 0 ? 1 : 0)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
             // Keep content laid out at its final size; reveal it through the animated mask.
             expanded.padding(.horizontal, 22).padding(.top, island.safeTop > 0 ? island.safeTop + 13 : 17)
                 .frame(width: 386, alignment: .top)
@@ -736,13 +773,15 @@ struct IslandView: View {
                         Text(music.status == "track" ? music.title : "FLYnamic Island").font(.system(size: 12, weight: .medium)).lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    Equalizer(playing: music.playing && !island.expanded, color: artworkTint, meter: music.visualizer)
+                    PlaybackBars(
+                        playing: music.playing && music.hasCurrentTrack && island.panelVisible && !island.expanded,
+                        color: artworkTint
+                    )
                 }.padding(.horizontal, 12)
                     .frame(width: island.collapsedWidth, height: island.safeTop > 0 ? island.safeTop : 40)
                     .contentShape(Rectangle())
             }.buttonStyle(.plain)
                 .accessibilityLabel(music.hasCurrentTrack ? "Open music controls. \(music.title). \(music.playing ? "Playing" : "Paused")" : "Show system statistics")
-                .accessibilityValue(music.visualizer.status)
                 .opacity(!island.expanded && music.hasCurrentTrack ? 1 : 0)
                 .animation(.easeOut(duration: 0.12).delay(island.expanded ? 0 : 0.16), value: island.expanded)
                 .allowsHitTesting(!island.expanded)
@@ -751,6 +790,7 @@ struct IslandView: View {
         .frame(width: island.expanded ? 386 : island.collapsedWidth,
                height: island.expanded ? expandedHeight : (island.safeTop > 0 ? island.safeTop : 40), alignment: .top)
         .foregroundStyle(.white)
+        .modifier(IslandGlassChrome(expanded: island.expanded, shape: shape))
         .clipShape(shape)
         .frame(width: 386, height: expandedHeight, alignment: .top)
         .animation(.easeInOut(duration: 0.45), value: music.artworkAccent)
@@ -760,7 +800,6 @@ struct IslandView: View {
         .onAppear { updateSampling() }
         .onChange(of: island.expanded) { _, expanded in
             if !expanded { island.requestedPane = nil }
-            music.visualizer.setVisible(island.panelVisible && !expanded && music.playing)
             updateSampling()
         }
         .onChange(of: island.panelVisible) { _, _ in updateSampling() }
@@ -995,7 +1034,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(withTitle: "Show / hide island", action: #selector(toggleVisibility), keyEquivalent: "")
         menu.addItem(withTitle: "Keep expanded", action: #selector(togglePin), keyEquivalent: "")
         menu.addItem(withTitle: "Open player", action: #selector(openMusic), keyEquivalent: "")
-        menu.addItem(withTitle: "Audio-reactive bars", action: #selector(toggleAudioBars), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit FLYnamic Island", action: #selector(quit), keyEquivalent: "q")
         for entry in menu.items { entry.target = self }
@@ -1098,7 +1136,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if visibility.isVisible {
             island.panelVisible = true
             if !panel.isVisible { resize(island.pinned, animate: false) }
-            music.visualizer.setVisible(!island.expanded && music.playing)
             pointerTimer?.fireDate = Date()
             panel.orderFrontRegardless()
         } else {
@@ -1108,7 +1145,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             hoverTracker = HoverTracker()
             pointerTimer?.fireDate = .distantFuture
             stats.setSamplingEnabled(false)
-            music.visualizer.setVisible(false)
             resize(false, animate: false)
             panel.orderOut(nil)
         }
@@ -1119,14 +1155,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !island.pinned { resize(false) }
     }
     @objc func openMusic() { music.openMusic() }
-    @objc func toggleAudioBars() { music.visualizer.toggle() }
     func menuNeedsUpdate(_ menu: NSMenu) {
         for entry in menu.items where entry.action == #selector(toggleVisibility) || entry.action == #selector(togglePin) {
             entry.isEnabled = true
-        }
-        for entry in menu.items where entry.action == #selector(toggleAudioBars) {
-            entry.state = music.visualizer.enabled ? .on : .off
-            entry.toolTip = music.visualizer.status
         }
     }
     @objc func quit() { NSApp.terminate(nil) }

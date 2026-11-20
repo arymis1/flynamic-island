@@ -12,7 +12,6 @@ struct AirPlayOutput: Identifiable {
 }
 
 final class MusicModel: ObservableObject {
-    let visualizer = AudioVisualization()
     @Published private(set) var isMusicRunning = false
     @Published private(set) var source = MediaSource.appleMusic
     var visibilityChanged: ((Bool) -> Void)?
@@ -23,7 +22,7 @@ final class MusicModel: ObservableObject {
     @Published var artwork: NSImage?
     @Published var artworkAccent = ArtworkAccent.fallback
     @Published var artworkBackdrop: NSImage?
-    @Published var playing = false { didSet { visualizer.update(playing: playing) } }
+    @Published var playing = false
     @Published var favorited = false
     @Published var favoriteAvailable = false
     @Published var updatingFavorite = false
@@ -135,9 +134,7 @@ final class MusicModel: ObservableObject {
         guard force || isMusicRunning != running || (selected != nil && selected != source) else { return }
         sessionGeneration += 1
         spotifyArtwork.cancel(); artworkURL = ""
-        visualizer.musicClosed()
         if let selected { source = selected }
-        visualizer.setSource(source.bundleIdentifier, title: source.title)
         isMusicRunning = running
         polling = false; playbackPolling = false
         playbackSync.reset(); playbackCommandInFlight = false; pendingFavorite = nil
@@ -525,18 +522,32 @@ struct ArtView: View {
     }
 }
 
-struct Equalizer: View {
-    var playing: Bool
-    var color: Color
-    @ObservedObject var meter: AudioVisualization
+struct PlaybackBars: View {
+    let playing: Bool
+    let color: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let barRanges: [Double] = [11, 18, 14, 9]
+
     var body: some View {
+        let animating = playing && !reduceMotion
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !animating)) { context in
+            // Two overlapping rhythms give the bars a smooth, staggered motion.
+            let phase = context.date.timeIntervalSinceReferenceDate
+                .truncatingRemainder(dividingBy: 4) * (.pi / 2)
             HStack(spacing: 2.5) {
-                ForEach(0..<4) { index in
-                    Capsule().fill(color).frame(width: 3, height: playing ? max(3, 2 + meter.levels[index] * 20) : 3)
-                        .animation(playing ? .linear(duration: 1.0 / 30.0) : nil, value: meter.levels[index])
+                ForEach(barRanges.indices, id: \.self) { index in
+                    let offset = Double(index)
+                    let level = animating
+                        ? 0.58 + 0.26 * sin(5 * phase - 0.9 * offset) + 0.10 * sin(7 * phase + 1.1 * offset)
+                        : 0.58
+                    Capsule().fill(color)
+                        .frame(width: 3, height: 3 + (playing ? barRanges[index] * level : 0))
                 }
-            }.frame(width: 23, height: 24)
-                .accessibilityLabel(playing ? "Live music levels" : "Paused. Flat dots")
+            }
+            .frame(width: 23, height: 24)
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -647,13 +658,15 @@ struct IslandView: View {
                         Text(music.status == "track" ? music.title : "FLYnamic Island").font(.system(size: 12, weight: .medium)).lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    Equalizer(playing: music.playing && !island.expanded, color: artworkTint, meter: music.visualizer)
+                    PlaybackBars(
+                        playing: music.playing && music.status == "track" && island.panelVisible && !island.expanded,
+                        color: artworkTint
+                    )
                 }.padding(.horizontal, 12)
                     .frame(width: island.collapsedWidth, height: island.safeTop > 0 ? island.safeTop : 40)
                     .contentShape(Rectangle())
             }.buttonStyle(.plain)
                 .accessibilityLabel("Open music controls. \(music.title). \(music.playing ? "Playing" : "Paused")")
-                .accessibilityValue(music.visualizer.status)
                 .opacity(island.expanded ? 0 : 1)
                 .animation(.easeOut(duration: 0.12).delay(island.expanded ? 0 : 0.16), value: island.expanded)
                 .allowsHitTesting(!island.expanded)
@@ -668,7 +681,6 @@ struct IslandView: View {
         .onChange(of: island.showingAirPlay) { _, showing in
             if !showing && !island.pinned && !island.pointerIsInside() { island.hover(false) }
         }
-        .onChange(of: island.expanded) { _, expanded in music.visualizer.setVisible(island.panelVisible && !expanded) }
         .preferredColorScheme(.dark)
     }
     @ViewBuilder var expanded: some View {
@@ -841,7 +853,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(withTitle: "Show / hide island", action: #selector(toggleVisibility), keyEquivalent: "")
         menu.addItem(withTitle: "Keep expanded", action: #selector(togglePin), keyEquivalent: "")
         menu.addItem(withTitle: "Open player", action: #selector(openMusic), keyEquivalent: "")
-        menu.addItem(withTitle: "Audio-reactive bars", action: #selector(toggleAudioBars), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit FLYnamic Island", action: #selector(quit), keyEquivalent: "q")
         for entry in menu.items { entry.target = self }
@@ -909,7 +920,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if visibility.isVisible {
             island.panelVisible = true
             if !panel.isVisible { resize(island.pinned, animate: false) }
-            music.visualizer.setVisible(!island.expanded)
             pointerTimer?.fireDate = Date()
             panel.orderFrontRegardless()
         } else {
@@ -918,7 +928,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             island.showingAirPlay = false
             hoverTracker = HoverTracker()
             pointerTimer?.fireDate = .distantFuture
-            music.visualizer.setVisible(false)
             resize(false, animate: false)
             panel.orderOut(nil)
         }
@@ -929,14 +938,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !island.pinned { resize(false) }
     }
     @objc func openMusic() { music.openMusic() }
-    @objc func toggleAudioBars() { music.visualizer.toggle() }
     func menuNeedsUpdate(_ menu: NSMenu) {
         for entry in menu.items where entry.action == #selector(toggleVisibility) || entry.action == #selector(togglePin) {
             entry.isEnabled = music.isMusicRunning
-        }
-        for entry in menu.items where entry.action == #selector(toggleAudioBars) {
-            entry.state = music.visualizer.enabled ? .on : .off
-            entry.toolTip = music.visualizer.status
         }
     }
     @objc func quit() { NSApp.terminate(nil) }
