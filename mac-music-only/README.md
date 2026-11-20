@@ -1,6 +1,6 @@
 # Flynamic Island — Music Only
 
-Apple Music and Spotify desktop on Apple silicon. Version 1.2, build 6.
+Apple Music and Spotify desktop on Apple silicon. Version 1.2, build 7.
 
 The compact bars animate when a song plays and settle into dots when paused. They use playback state and require no system audio capture.
 

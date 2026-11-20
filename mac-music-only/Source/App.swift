@@ -35,7 +35,9 @@ final class MusicModel: ObservableObject {
     private var trackID = ""
     @Published var position = 0.0
     @Published var duration = 0.0
-    @Published var volume = 50.0
+    @Published private(set) var volume = 50.0
+    private var volumeRevision = 0
+    private var pendingVolume: (target: Double, deadline: TimeInterval)?
     @Published var busy = false
     @Published var message = ""
     @Published var airPlayOutputs: [AirPlayOutput] = []
@@ -145,6 +147,8 @@ final class MusicModel: ObservableObject {
         trackID = ""; title = "FLYnamic Island"; artist = ""; album = ""
         artwork = nil; artworkBackdrop = nil; artworkAccent = .fallback
         position = 0; duration = 0
+        pendingVolume = nil
+        volume = 50
         timer?.fireDate = running ? Date() : .distantFuture
         playbackTimer?.fireDate = running ? Date() : .distantFuture
         status = running ? "connecting" : "closed"
@@ -173,6 +177,7 @@ final class MusicModel: ObservableObject {
         let generation = sessionGeneration
         let playbackRevision = playbackSync.revision
         let shuffleRevision = shuffleRevision
+        let volumeRevision = volumeRevision
         let bridge = bridge
         queue.async {
             let snapshot = bridge.snapshot()
@@ -225,7 +230,9 @@ final class MusicModel: ObservableObject {
                     self.album = snapshot["album"] as? String ?? ""
                     self.duration = snapshot["duration"] as? Double ?? 0
                     self.applyPlayback(position: snapshot["position"] as? Double ?? 0, playing: snapshot["playing"] as? Bool ?? false, revision: playbackRevision)
-                    self.volume = snapshot["volume"] as? Double ?? 50
+                    if let volume = snapshot["volume"] as? Double {
+                        self.observeVolume(volume, revision: volumeRevision)
+                    }
                     if self.source == .spotify {
                         self.loadSpotifyArtwork(snapshot["artworkURL"] as? String ?? "", trackID: newID, generation: generation)
                     } else {
@@ -265,6 +272,41 @@ final class MusicModel: ObservableObject {
             self.artworkBackdrop = ArtworkAccent.backdrop(from: image)
         }
     }
+    private func observeVolume(_ reported: Double, revision: Int) {
+        guard revision == volumeRevision else { return }
+        if let pendingVolume {
+            guard reported == pendingVolume.target ||
+                    ProcessInfo.processInfo.systemUptime >= pendingVolume.deadline else { return }
+            self.pendingVolume = nil
+        }
+        if volume != reported { volume = reported }
+    }
+
+    func setVolume(_ requested: Double) {
+        guard authorized, status == "track", requested.isFinite else { return }
+        let target = min(100, max(0, requested.rounded()))
+        volumeRevision += 1
+        let revision = volumeRevision
+        let generation = sessionGeneration
+        pendingVolume = (target, .infinity)
+        volume = target
+        message = ""
+        let bridge = bridge
+        queue.async {
+            let success = bridge.performCommand("volume", value: target)
+            DispatchQueue.main.async {
+                guard self.isMusicRunning, self.sessionGeneration == generation,
+                      self.volumeRevision == revision else { return }
+                // Ignore old player readings until the new value arrives.
+                if self.pendingVolume != nil {
+                    self.pendingVolume = (target, ProcessInfo.processInfo.systemUptime + (success ? 2 : 0))
+                }
+                if !success { self.message = "Music couldn’t change volume. Try again." }
+                self.refresh()
+            }
+        }
+    }
+
     func command(_ command: String, value: Double = 0) {
         if command == "playpause" { togglePlayback(); return }
         guard authorized, status == "track", !busy else { return }
@@ -763,8 +805,8 @@ struct IslandView: View {
                 HStack(spacing: 9) {
                     Image(systemName: "speaker.fill").font(.system(size: 10))
                     MusicScrubber(value: Binding(get: { adjustingVolume ? volumeDraft : music.volume }, set: { volumeDraft = $0 }), upperBound: 100, tint: .white.opacity(0.55), label: "Music volume", onEditingChanged: { editing in
+                        if !editing { music.setVolume(volumeDraft) }
                         adjustingVolume = editing
-                        if !editing { music.command("volume", value: volumeDraft) }
                     })
                     Image(systemName: "speaker.wave.3.fill").font(.system(size: 10))
                 }.foregroundStyle(.white.opacity(0.35))
