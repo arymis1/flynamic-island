@@ -1,6 +1,6 @@
 # Flynamic Island
 
-A small Mac music companion that lives near the top of the screen. This public repository keeps the four Mac editions together.
+Flynamic Island puts now-playing artwork and playback controls at the top of your Mac’s screen. Choose an edition based on your player and Mac.
 
 | Edition | Folder | Processor | Players | CPU/RAM stats |
 | --- | --- | --- | --- | --- |
@@ -11,11 +11,9 @@ A small Mac music companion that lives near the top of the screen. This public r
 
 ## Downloads
 
-The first GitHub Release preserves the four existing installers, rather than silently replacing them with new builds. Installers are Release assets, not files in the source tree. [Edition details and existing Drive links](docs/downloads.md) identify the right download.
+Download the DMG for your edition from [GitHub Releases](https://github.com/arymis1/flynamic-island/releases/latest) or [Google Drive](docs/downloads.md). The installers are from the initial release. Build from `main` for newer changes, including animated scrubbing and live volume in the three Apple silicon editions.
 
-**This repository and its Releases are private.** Friends need repository access to use GitHub downloads. Existing Drive links remain available for friends who do not have repository access.
-
-All four editions require macOS 14 or newer; live audio bars require macOS 14.2 or newer and system audio permission. Intel compatibility checks ran through Rosetta, but a physical Intel Mac was not tested here. Current builds are ad-hoc signed and not Apple-notarized; macOS may require **System Settings → Privacy & Security → Open Anyway** after the first blocked launch.
+All editions require macOS 14 or later. Optional system audio analysis requires macOS 14.2 or later and system audio permission. See [privacy and permissions](docs/privacy.md) for which builds use it. The installers are ad-hoc signed, and macOS may show a first-launch warning. [Installation steps](docs/downloads.md)
 
 ## Build
 
@@ -36,11 +34,11 @@ python3 tools/package.py --app 'mac-music-system-stats/FLYnamic Island.app' --ou
 
 ## Development notes
 
-- Music + Stats and Intel use the same application source snapshot. Intel Macs use the existing layout for a screen without a notch.
+- The Intel edition uses the original Music + System Stats code and the layout for Macs without a notch. Intel checks ran through Rosetta. A physical Intel Mac remains untested.
 - Browser music is a separate YouTube Music/Chrome edition. It requires Chrome Automation permission and **View → Developer → Allow JavaScript from Apple Events**. It is not a general browser-player integration.
 - Apple Music supports Favorites. Spotify's desktop scripting interface does not expose adding to Liked Songs.
 - Paused music keeps flat dots. Artwork, album colors, playback controls, sound output selection and hover animations are preserved from the relevant edition.
 - Stats read macOS counters directly; Activity Monitor does not need to be open. Memory graph height shows usage, while its color follows system memory pressure.
 - Lock-screen work is paused. Historical helper files retained in source are not part of the normal build scripts. There is no Internet-speed page.
 
-See [verification](docs/verification.md), [privacy](docs/privacy.md), and [third-party notices](THIRD_PARTY_NOTICES.md). No license for the original application code is granted by this private backup; retained third-party notices apply to their respective files.
+See [verification](docs/verification.md), [privacy](docs/privacy.md), and [third-party notices](THIRD_PARTY_NOTICES.md). Third-party notices cover the files they identify. The original application code has no license granted here.

@@ -1,6 +1,6 @@
 # Repository verification
 
-Imported November 1, 2026. This is a source backup and packaging cleanup, not a new feature release.
+This page records checks for the November 1, 2026 import. The source and build numbers on `main` have progressed since that import.
 
 ## Provenance
 
@@ -15,8 +15,6 @@ Each edition retains its own source snapshot and build script so changes can be 
 ## Test scope
 
 Historical checks covered playback synchronization, hover and page routing, CPU/memory accounting, audio-band analysis and artwork handling. Intel unit checks ran as x86_64 processes through Rosetta on an Apple-silicon Mac; this does not establish physical Intel UI, audio-tap or permission behavior. No new live player commands or permissions are exercised by the source import.
-
-The preparation checks for this import are recorded below after they run. No iPad simulator is used.
 
 ## Import checks completed
 
