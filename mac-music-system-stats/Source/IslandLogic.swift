@@ -2,9 +2,23 @@ import Foundation
 import CoreGraphics
 
 enum MediaSource: String, CaseIterable, Hashable {
-    case appleMusic, spotify
-    var bundleIdentifier: String { self == .spotify ? "com.spotify.client" : "com.apple.Music" }
-    var title: String { self == .spotify ? "Spotify" : "Apple Music" }
+    case appleMusic, spotify, youtubeMusic
+
+    var bundleIdentifier: String {
+        switch self {
+        case .appleMusic: return "com.apple.Music"
+        case .spotify: return "com.spotify.client"
+        case .youtubeMusic: return "com.google.Chrome"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .appleMusic: return "Apple Music"
+        case .spotify: return "Spotify"
+        case .youtubeMusic: return "YouTube Music"
+        }
+    }
 }
 
 struct MediaSourceSelection {

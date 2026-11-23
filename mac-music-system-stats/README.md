@@ -1,11 +1,19 @@
 # Flynamic Island — Music + System Stats
 
-Apple Music and Spotify desktop, with CPU/RAM stats and two-finger page swipe. Version 1.3, build 32. Apple silicon.
+Apple Music, Spotify desktop, and YouTube Music in Chrome, with CPU/RAM stats and two-finger page swipe. Version 1.4, build 33. Apple silicon.
 
 The compact bars animate when a song plays and settle into dots when paused. They use playback state and require no system audio capture. The expanded panel uses Liquid Glass on macOS 26 and later.
 
 Build with `./build.sh` on macOS with Xcode command-line tools. The result stays in this folder and is not installed or launched automatically. See the [root README](../README.md) for permissions and packaging.
 
+## YouTube Music setup
+
+1. Open Google Chrome and visit [YouTube Music](https://music.youtube.com/).
+2. In Flynamic’s waveform menu, select **Player → YouTube Music in Chrome** and allow Chrome Automation if prompted.
+3. In Chrome, enable **View → Developer → Allow JavaScript from Apple Events**.
+
+Choose **Player → Automatic** to follow playback or pick a connected player to keep it selected. Automatic switching continues after setup. Chrome integration targets YouTube Music tabs in regular Chrome windows.
+
 ## Download
 
-[Download the DMG on Google Drive](https://drive.google.com/file/d/1krZzsMbrvYTMSnyBAsTGMTQquP5BvggI/view) (version 1.3, build 25)
+[Download the combined preview DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-combined-1.4/Flynamic-Island-Combined.dmg) (version 1.4, build 33)

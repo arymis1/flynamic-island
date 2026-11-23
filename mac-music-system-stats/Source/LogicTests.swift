@@ -16,6 +16,12 @@ import AppKit
         assert(selection.update(running: [.appleMusic], playing: []) == .appleMusic)
         assert(selection.update(running: [], playing: [.spotify]) == nil)
         assert(selection.update(running: [.spotify], playing: []) == .spotify)
+        let available: Set<MediaSource> = [.appleMusic, .spotify, .youtubeMusic]
+        assert(selection.update(running: available, playing: [.spotify]) == .spotify)
+        assert(selection.update(running: available, playing: [.spotify, .youtubeMusic]) == .youtubeMusic)
+        assert(selection.update(running: available, playing: [.spotify, .youtubeMusic]) == .youtubeMusic)
+        assert(selection.update(running: available, playing: []) == .youtubeMusic)
+        assert(selection.update(running: [.appleMusic], playing: [.appleMusic]) == .appleMusic)
         assert(SpotifyArtworkLoader.allowedURL("https://i.scdn.co/image/abc") != nil)
         assert(SpotifyArtworkLoader.allowedURL("https://image-cdn-ak.spotifycdn.com/image/abc") != nil)
         assert(SpotifyArtworkLoader.allowedURL("http://i.scdn.co/image/abc") == nil)

@@ -1,4 +1,6 @@
-# Flynamic Island — Browser music
+# Flynamic Island — Browser Music (legacy)
+
+The [combined Music + System Stats edition](../mac-music-system-stats/README.md) now includes YouTube Music in Chrome. This folder preserves the earlier standalone Browser Music edition.
 
 YouTube Music in Google Chrome, with CPU/RAM stats and two-finger page swipe. Version 1.0, build 3. Apple silicon. Requires Chrome Automation consent and Allow JavaScript from Apple Events.
 

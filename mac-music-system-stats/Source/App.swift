@@ -53,7 +53,7 @@ final class MusicModel: ObservableObject {
     private var authorizationRequest: UUID?
     private var authorizationCheckRevision = 0
     private var started = false
-    private let bridges: [MediaSource: MusicBridge] = Dictionary(uniqueKeysWithValues: MediaSource.allCases.map {
+    private let bridges: [MediaSource: MusicBridge] = Dictionary(uniqueKeysWithValues: MediaSource.allCases.filter { $0 != .youtubeMusic }.map {
         ($0, MusicBridge(bundleIdentifier: $0.bundleIdentifier))
     })
     private var bridge: MusicBridge { bridges[source]! }
@@ -62,6 +62,24 @@ final class MusicModel: ObservableObject {
     private var sourceSelection = MediaSourceSelection()
     private var selectionTimer: Timer?
     private var selectionPolling = false
+    private let chrome = ChromeBridge()
+    private let chromeQueue = DispatchQueue(label: "local.music-island.chrome", qos: .userInitiated)
+    private var chromePID: pid_t?
+    private var chromeTrackAvailable = false
+    private var chromePlaying = false
+    private var chromePolling = false
+    private var chromeAuthorizationRequest: UUID?
+    private var chromeGeneration = 0
+    private(set) var chromeStatus = "closed"
+    private(set) var youtubeEnabled = UserDefaults.standard.bool(forKey: "youtubeMusicEnabled")
+    private(set) var preferredSource: MediaSource?
+    var availableSources: Set<MediaSource> {
+        var sources = Set(runningPIDs.keys)
+        if chromeTrackAvailable { sources.insert(.youtubeMusic) }
+        return sources
+    }
+    private var playerQueue: DispatchQueue { source == .youtubeMusic ? chromeQueue : queue }
+    private let youtubeArtwork = YouTubeArtworkLoader()
     private let spotifyArtwork = SpotifyArtworkLoader()
     private let appleArtwork = AppleArtworkLoader()
     private var artworkURL = ""
@@ -76,7 +94,7 @@ final class MusicModel: ObservableObject {
     private var paletteImage: NSImage?
     private var palette = ArtworkAccent.fallback
     private var backdrop: NSImage?
-    private var sessionGeneration = 0
+    private(set) var sessionGeneration = 0
 
     init() {
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refresh() }
@@ -103,7 +121,7 @@ final class MusicModel: ObservableObject {
     func refreshPlayers(excludingPID: pid_t? = nil) {
         guard started else { return }
         var pids: [MediaSource: pid_t] = [:]
-        for candidate in MediaSource.allCases {
+        for candidate in bridges.keys {
             if let app = NSRunningApplication.runningApplications(withBundleIdentifier: candidate.bundleIdentifier)
                 .first(where: { !$0.isTerminated && $0.processIdentifier != excludingPID }) {
                 pids[candidate] = app.processIdentifier
@@ -117,20 +135,19 @@ final class MusicModel: ObservableObject {
         let processChanged = pids[source] != runningPIDs[source]
         runningPIDs = pids
         playingSources.formIntersection(Set(pids.keys))
-        let selected = sourceSelection.update(running: Set(pids.keys), playing: playingSources)
-        activate(selected, force: processChanged)
+        updateChromeProcess(excludingPID: excludingPID)
+        selectPlayer(force: processChanged)
         if isMusicRunning && !authorized && !busy { connect(request: false) }
-        if pids.count > 1 { probePlayers() }
+        if pids.count > 1 || (chromeTrackAvailable && !pids.isEmpty) { probePlayers() }
     }
     func playerNotification(source: MediaSource, playing: Bool) {
         guard runningPIDs[source] != nil else { return }
         if source == self.source && playbackSync.pending != nil { return }
         if playing { playingSources.insert(source) } else { playingSources.remove(source) }
-        let selected = sourceSelection.update(running: Set(runningPIDs.keys), playing: playingSources)
-        activate(selected)
+        selectPlayer()
     }
     private func probePlayers() {
-        guard !selectionPolling, runningPIDs.count > 1 else { return }
+        guard !selectionPolling else { return }
         selectionPolling = true
         let pids = runningPIDs
         let bridges = bridges
@@ -144,20 +161,92 @@ final class MusicModel: ObservableObject {
             DispatchQueue.main.async {
                 self.selectionPolling = false
                 guard self.runningPIDs == pids else { return }
-                if self.playbackSync.pending != nil {
+                if self.source != .youtubeMusic, self.playbackSync.pending != nil {
                     if self.playing { playing.insert(self.source) } else { playing.remove(self.source) }
                 }
                 self.playingSources = playing
-                let selected = self.sourceSelection.update(running: Set(pids.keys), playing: playing)
-                self.activate(selected)
+                self.selectPlayer()
             }
         }
     }
+    private func selectPlayer(force: Bool = false) {
+        let available = availableSources
+        var playing = playingSources
+        if chromePlaying { playing.insert(.youtubeMusic) }
+        let automatic = sourceSelection.update(running: available, playing: playing)
+        if let preferredSource, !available.contains(preferredSource) { self.preferredSource = nil }
+        activate(preferredSource ?? automatic, force: force)
+    }
+
+    func choosePlayer(_ source: MediaSource?) {
+        preferredSource = source
+        selectPlayer()
+    }
+
+    func setYouTubeEnabled(_ enabled: Bool) {
+        youtubeEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "youtubeMusicEnabled")
+        refreshPlayers()
+        if enabled {
+            if chromePID == nil { openYouTubeMusic() }
+            else { requestChromeConsent() }
+        }
+    }
+
+    func requestChromeConsent() {
+        guard youtubeEnabled, chromePID != nil, chromeAuthorizationRequest == nil else { return }
+        let request = UUID()
+        chromeAuthorizationRequest = request
+        let generation = chromeGeneration
+        NSApp.activate(ignoringOtherApps: true)
+        authorizationQueue.async {
+            let result = ChromeBridge().permissionRequestingConsent(true)
+            DispatchQueue.main.async {
+                guard self.chromeAuthorizationRequest == request else { return }
+                self.chromeAuthorizationRequest = nil
+                guard self.chromeGeneration == generation else { return }
+                self.chromeStatus = result == 0 ? "connecting" : "denied"
+                self.probeChrome()
+            }
+        }
+    }
+
+    private func updateChromeProcess(excludingPID: pid_t?) {
+        let pid = youtubeEnabled ? NSRunningApplication.runningApplications(withBundleIdentifier: MediaSource.youtubeMusic.bundleIdentifier)
+            .first(where: { !$0.isTerminated && $0.processIdentifier != excludingPID })?.processIdentifier : nil
+        if pid != chromePID {
+            chromeGeneration += 1
+            chromePID = pid
+            chromeTrackAvailable = false
+            chromePlaying = false
+            chromeStatus = pid == nil ? "closed" : "connecting"
+        }
+        probeChrome()
+    }
+
+    private func probeChrome() {
+        guard chromePID != nil, !chromePolling else { return }
+        chromePolling = true
+        let generation = chromeGeneration
+        chromeQueue.async {
+            let snapshot = self.chrome.snapshot()
+            DispatchQueue.main.async {
+                self.chromePolling = false
+                guard self.chromeGeneration == generation else { return }
+                self.chromeStatus = snapshot["status"] as? String ?? "error"
+                self.chromeTrackAvailable = self.chromeStatus == "track"
+                self.chromePlaying = self.source == .youtubeMusic && self.playbackSync.pending != nil
+                    ? self.playing : snapshot["playing"] as? Bool == true
+                self.selectPlayer()
+            }
+        }
+    }
+
     private func activate(_ selected: MediaSource?, force: Bool = false) {
         let running = selected != nil
         guard force || isMusicRunning != running || (selected != nil && selected != source) else { return }
         sessionGeneration += 1
-        spotifyArtwork.cancel(); appleArtwork.cancel(); artworkURL = ""
+        spotifyArtwork.cancel(); appleArtwork.cancel(); youtubeArtwork.cancel(); artworkURL = ""
         if let selected { source = selected }
         isMusicRunning = running
         polling = false; playbackPolling = false
@@ -175,10 +264,13 @@ final class MusicModel: ObservableObject {
         playbackTimer?.fireDate = running ? Date() : .distantFuture
         status = running ? "connecting" : "closed"
         visibilityChanged?(running)
-        if running { connect(request: false) }
+        if selected == .youtubeMusic {
+            authorized = true
+            refresh()
+        } else if running { connect(request: false) }
     }
     func connect(request: Bool = true) {
-        guard !busy, isMusicRunning else { return }
+        guard !busy, isMusicRunning, source != .youtubeMusic else { return }
         if request && authorizationRequest != nil {
             status = "permission-pending"
             return
@@ -223,22 +315,27 @@ final class MusicModel: ObservableObject {
         let playbackRevision = playbackSync.revision
         let shuffleRevision = shuffleRevision
         let volumeRevision = volumeRevision
-        let bridge = bridge
+        let source = source
+        let desktopBridge = bridges[source]
         let pid = runningPIDs[source]
-        queue.async {
-            let snapshot = bridge.snapshot(forRunningProcessIdentifier: pid ?? 0)
+        playerQueue.async {
+            let snapshot = desktopBridge?.snapshot(forRunningProcessIdentifier: pid ?? 0) ?? self.chrome.snapshot()
             let image = snapshot["artwork"] as? NSImage
-            if image !== self.paletteImage {
+            if desktopBridge != nil, image !== self.paletteImage {
                 self.paletteImage = image
                 self.palette = ArtworkAccent.extract(from: image)
                 self.backdrop = ArtworkAccent.backdrop(from: image)
             }
-            let accent = self.palette
-            let backdrop = self.backdrop
+            let accent = desktopBridge == nil ? .fallback : self.palette
+            let backdrop = desktopBridge == nil ? nil : self.backdrop
             DispatchQueue.main.async {
                 guard self.isMusicRunning, self.sessionGeneration == generation else { return }
                 self.polling = false
                 let newStatus = snapshot["status"] as? String ?? "error"
+                if source == .youtubeMusic, newStatus != "track" {
+                    self.probeChrome()
+                    return
+                }
                 if newStatus == "closed" {
                     // Trust the actual process list before discarding a song.
                     self.refreshPlayers()
@@ -288,7 +385,9 @@ final class MusicModel: ObservableObject {
                     if let volume = snapshot["volume"] as? Double {
                         self.observeVolume(volume, revision: volumeRevision)
                     }
-                    if self.source == .spotify {
+                    if self.source == .youtubeMusic {
+                        self.loadYouTubeArtwork(snapshot["artworkURL"] as? String ?? "", trackID: newID, generation: generation)
+                    } else if self.source == .spotify {
                         self.loadSpotifyArtwork(snapshot["artworkURL"] as? String ?? "", trackID: newID, generation: generation)
                     } else if let nativeArtwork = snapshot["artwork"] as? NSImage {
                         self.appleArtwork.cancel()
@@ -320,6 +419,29 @@ final class MusicModel: ObservableObject {
             }
         }
     }
+    private func loadYouTubeArtwork(_ url: String, trackID: String, generation: Int) {
+        if artworkURL != url {
+            artworkURL = url
+            artwork = nil; artworkBackdrop = nil; artworkAccent = .fallback
+        }
+        youtubeArtwork.load(url) { [weak self] image in
+            guard let self, self.sessionGeneration == generation, self.trackID == trackID,
+                  self.artworkURL == url, self.artwork !== image else { return }
+            self.artwork = image
+            self.artworkAccent = ArtworkAccent.extract(from: image)
+            self.artworkBackdrop = ArtworkAccent.backdrop(from: image)
+        }
+    }
+
+    private func commandForCurrentTrack() -> (String, Double) -> Bool {
+        if let desktopBridge = bridges[source] {
+            return { desktopBridge.performCommand($0, value: $1) }
+        }
+        let id = trackID
+        let pid = chromePID ?? 0
+        return { [chrome] in chrome.performCommand($0, value: $1, trackID: id, expectedPID: pid) }
+    }
+
     private func loadSpotifyArtwork(_ url: String, trackID: String, generation: Int) {
         if artworkURL != url {
             artworkURL = url
@@ -347,7 +469,7 @@ final class MusicModel: ObservableObject {
         guard revision == volumeRevision else { return }
         if let pendingVolume {
             guard pendingVolume.deadline.isFinite,
-                  reported == pendingVolume.target ||
+                  abs(reported - pendingVolume.target) < 0.001 ||
                     ProcessInfo.processInfo.systemUptime >= pendingVolume.deadline else { return }
             self.pendingVolume = nil
         }
@@ -371,9 +493,9 @@ final class MusicModel: ObservableObject {
         volumeCommandInFlight = true
         let revision = volumeRevision
         let generation = sessionGeneration
-        let bridge = bridge
-        queue.async {
-            let success = bridge.performCommand("volume", value: pending.target)
+        let send = commandForCurrentTrack()
+        playerQueue.async {
+            let success = send("volume", pending.target)
             DispatchQueue.main.async {
                 self.volumeCommandInFlight = false
                 guard self.sessionGeneration == generation, self.volumeRevision == revision else {
@@ -395,9 +517,9 @@ final class MusicModel: ObservableObject {
         message = ""
         let generation = sessionGeneration
         if command == "seek" { position = value; positionAnchorTime = ProcessInfo.processInfo.systemUptime }
-        let bridge = bridge
-        queue.async {
-            let success = bridge.performCommand(command, value: value)
+        let send = commandForCurrentTrack()
+        playerQueue.async {
+            let success = send(command, value)
             DispatchQueue.main.async {
                 guard self.isMusicRunning, self.sessionGeneration == generation else { return }
                 self.busy = false
@@ -420,10 +542,10 @@ final class MusicModel: ObservableObject {
         guard !playbackCommandInFlight, let request = playbackSync.pending else { return }
         playbackCommandInFlight = true
         let generation = sessionGeneration
-        let bridge = bridge
-        queue.async {
+        let send = commandForCurrentTrack()
+        playerQueue.async {
             // Explicit commands remain correct even when Music's reported state lags.
-            let success = bridge.performCommand(request.desired ? "play" : "pause", value: 0)
+            let success = send(request.desired ? "play" : "pause", 0)
             DispatchQueue.main.async {
                 guard self.isMusicRunning, self.sessionGeneration == generation else { return }
                 self.playbackCommandInFlight = false
@@ -453,9 +575,12 @@ final class MusicModel: ObservableObject {
         self.position = IslandLogic.boundedPosition(position, duration: duration)
         positionAnchorTime = ProcessInfo.processInfo.systemUptime
         if self.playing != playing { self.playing = playing }
+        if source != .youtubeMusic {
+            if playing { playingSources.insert(source) } else { playingSources.remove(source) }
+        }
     }
     func refreshPlayback() {
-        guard authorized, isMusicRunning, !busy, !polling, !playbackPolling else { return }
+        guard source != .youtubeMusic, authorized, isMusicRunning, !busy, !polling, !playbackPolling else { return }
         playbackPolling = true
         let generation = sessionGeneration
         let playbackRevision = playbackSync.revision
@@ -478,11 +603,11 @@ final class MusicModel: ObservableObject {
         shuffleRevision += 1
         let revision = shuffleRevision
         let generation = sessionGeneration
-        let bridge = bridge
+        let send = commandForCurrentTrack()
         shuffleEnabled = desired; updatingShuffle = true; message = ""
         pendingShuffle = (desired, .infinity)
-        queue.async {
-            let success = bridge.performCommand("shuffle", value: desired ? 1 : 0)
+        playerQueue.async {
+            let success = send("shuffle", desired ? 1 : 0)
             DispatchQueue.main.async {
                 guard self.sessionGeneration == generation, self.shuffleRevision == revision else { return }
                 if success {
@@ -525,12 +650,22 @@ final class MusicModel: ObservableObject {
             }
         }
     }
+    private func openYouTubeMusic() {
+        guard let chrome = NSWorkspace.shared.urlForApplication(withBundleIdentifier: MediaSource.youtubeMusic.bundleIdentifier),
+              let page = URL(string: "https://music.youtube.com/") else { return }
+        NSWorkspace.shared.open([page], withApplicationAt: chrome,
+                                configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
+    }
     func openMusic() {
+        if source == .youtubeMusic {
+            openYouTubeMusic()
+            return
+        }
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: source.bundleIdentifier) else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: .init())
     }
     func loadAirPlayOutputs(clearError: Bool = true) {
-        guard authorized, !airPlayLoading else { return }
+        guard source != .youtubeMusic, authorized, !airPlayLoading else { return }
         airPlayLoading = true
         if clearError { airPlayError = "" }
         queue.async {
@@ -547,7 +682,7 @@ final class MusicModel: ObservableObject {
         }
     }
     func selectAirPlayOutput(_ id: String) {
-        guard authorized, !airPlayLoading else { return }
+        guard source != .youtubeMusic, authorized, !airPlayLoading else { return }
         airPlayLoading = true
         airPlayError = ""
         queue.async {
@@ -950,11 +1085,16 @@ struct IslandView: View {
                 }
                 TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !music.playing || !island.expanded || showingStats)) { _ in
                     let livePosition = music.currentPosition()
+                    let session = music.sessionGeneration
                     VStack(spacing: 0) {
-                    MusicScrubber(value: Binding(get: { seeking ? seekDraft : livePosition }, set: { seekDraft = $0 }), upperBound: music.duration, tint: lightArtworkTint, label: "Track position", expandsOnDrag: true, onEditingChanged: { editing in
+                    MusicScrubber(value: Binding(get: { seeking ? seekDraft : livePosition }, set: {
+                        if music.sessionGeneration == session { seekDraft = $0 }
+                    }), upperBound: music.duration, tint: lightArtworkTint, label: "Track position", expandsOnDrag: true, onEditingChanged: { editing in
+                        guard music.sessionGeneration == session else { return }
                         seeking = editing
                         if !editing { music.command("seek", value: seekDraft) }
                     }).disabled(music.duration <= 0)
+                        .id(session)
                     HStack {
                         Text(IslandLogic.seconds(seeking ? seekDraft : livePosition))
                         Spacer()
@@ -962,6 +1102,7 @@ struct IslandView: View {
                     }.font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(.white.opacity(0.65))
                     }
                 }
+                .onChange(of: music.sessionGeneration) { _, _ in seeking = false }
                 ZStack {
                     HStack(spacing: 20) {
                         CircleControl(symbol: "backward.fill", label: "Previous track") { music.command("previous") }
@@ -990,13 +1131,17 @@ struct IslandView: View {
                         } label: {
                             Image(systemName: "airplay.audio").font(.system(size: 20)).foregroundStyle(.white.opacity(0.55)).frame(width: 28, height: 40)
                         }.buttonStyle(.plain).help("Sound output").accessibilityLabel("Sound output")
+                            .disabled(music.source == .youtubeMusic)
                             .popover(isPresented: $island.showingAirPlay, arrowEdge: .top) { AirPlayPicker(music: music) }
                     }
                 }
                 HStack(spacing: 9) {
                     Image(systemName: "speaker.fill").font(.system(size: 10))
-                    MusicScrubber(value: Binding(get: { music.volume }, set: music.setVolume),
-                                  upperBound: 100, tint: .white.opacity(0.55), label: "Music volume")
+                    let session = music.sessionGeneration
+                    MusicScrubber(value: Binding(get: { music.volume }, set: { value in
+                        if music.sessionGeneration == session { music.setVolume(value) }
+                    }), upperBound: 100, tint: .white.opacity(0.55), label: "Music volume")
+                    .id(session)
                     Image(systemName: "speaker.wave.3.fill").font(.system(size: 10))
                 }.foregroundStyle(.white.opacity(0.35))
                 if !music.message.isEmpty { Text(music.message).font(.system(size: 9)).foregroundStyle(.orange) }
@@ -1097,6 +1242,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(withTitle: "Show / hide island", action: #selector(toggleVisibility), keyEquivalent: "")
         menu.addItem(withTitle: "Keep expanded", action: #selector(togglePin), keyEquivalent: "")
         menu.addItem(withTitle: "Open player", action: #selector(openMusic), keyEquivalent: "")
+        let player = NSMenuItem(title: "Player", action: nil, keyEquivalent: "")
+        player.submenu = NSMenu(title: "Player")
+        menu.addItem(player)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit FLYnamic Island", action: #selector(quit), keyEquivalent: "q")
         for entry in menu.items { entry.target = self }
@@ -1218,7 +1366,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !island.pinned { resize(false) }
     }
     @objc func openMusic() { music.openMusic() }
+    @objc private func choosePlayer(_ item: NSMenuItem) {
+        music.choosePlayer((item.representedObject as? String).flatMap(MediaSource.init(rawValue:)))
+    }
+    @objc private func toggleYouTubeMusic() { music.setYouTubeEnabled(!music.youtubeEnabled) }
+    @objc private func connectYouTubeMusic() { music.requestChromeConsent() }
+
     func menuNeedsUpdate(_ menu: NSMenu) {
+        if let submenu = menu.item(withTitle: "Player")?.submenu {
+            submenu.removeAllItems()
+            let automatic = submenu.addItem(withTitle: "Automatic", action: #selector(choosePlayer(_:)), keyEquivalent: "")
+            automatic.target = self
+            automatic.state = music.preferredSource == nil ? .on : .off
+            for source in MediaSource.allCases where music.availableSources.contains(source) {
+                let player = submenu.addItem(withTitle: source.title, action: #selector(choosePlayer(_:)), keyEquivalent: "")
+                player.target = self
+                player.representedObject = source.rawValue
+                player.state = music.preferredSource == source ? .on : .off
+            }
+            submenu.addItem(.separator())
+            let toggle = submenu.addItem(withTitle: "YouTube Music in Chrome", action: #selector(toggleYouTubeMusic), keyEquivalent: "")
+            toggle.target = self
+            toggle.state = music.youtubeEnabled ? .on : .off
+            if music.youtubeEnabled, ["permission", "denied"].contains(music.chromeStatus) {
+                let connect = submenu.addItem(withTitle: "Connect YouTube Music…", action: #selector(connectYouTubeMusic), keyEquivalent: "")
+                connect.target = self
+            }
+            if music.youtubeEnabled, music.chromeStatus == "chrome-setting" {
+                let hint = NSMenuItem(title: "In Chrome, enable Allow JavaScript from Apple Events", action: nil, keyEquivalent: "")
+                submenu.addItem(hint)
+            }
+        }
         for entry in menu.items where entry.action == #selector(toggleVisibility) || entry.action == #selector(togglePin) {
             entry.isEnabled = true
         }

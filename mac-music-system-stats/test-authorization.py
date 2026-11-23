@@ -89,9 +89,9 @@ with tempfile.TemporaryDirectory(prefix='flynamic-auth-tests-') as tmp:
     (tmp/'Model.swift').write_text(model)
     (tmp/'Tests.swift').write_text(fixture)
     build = root / '.build'
-    args = ['xcrun','swiftc','-swift-version','5','-parse-as-library','-import-objc-header',str(src/'MusicBridge.h'),str(tmp/'Model.swift'),str(tmp/'Tests.swift')]
-    args += [str(src/f) for f in ['IslandLogic.swift','ArtworkAccent.swift','SpotifyArtwork.swift','AppleArtwork.swift']]
-    args += [str(build/'MusicBridge.o')]
+    args = ['xcrun','swiftc','-swift-version','5','-parse-as-library','-import-objc-header',str(src/'PlayerBridges.h'),str(tmp/'Model.swift'),str(tmp/'Tests.swift')]
+    args += [str(src/f) for f in ['IslandLogic.swift','ArtworkAccent.swift','SpotifyArtwork.swift','YouTubeArtwork.swift','AppleArtwork.swift']]
+    args += [str(build/'MusicBridge.o'), str(build/'ChromeBridge.o')]
     for fw in ['AppKit','SwiftUI','ScriptingBridge','Carbon','QuartzCore','CoreAudio']: args += ['-framework',fw]
     args += ['-o',str(tmp/'test')]
     subprocess.run(args,check=True)
