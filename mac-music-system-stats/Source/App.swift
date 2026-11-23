@@ -1236,6 +1236,35 @@ final class IslandPanel: NSPanel {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemValidation {
+    private static let menuBarIcon: NSImage = {
+        let image = NSImage(size: NSSize(width: 22, height: 18), flipped: false) { _ in
+            guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            context.setFillColor(NSColor.black.cgColor)
+            let pill = CGRect(x: 2, y: 6, width: 15.5, height: 6)
+            context.addPath(CGPath(roundedRect: pill, cornerWidth: 3, cornerHeight: 3, transform: nil))
+            context.fillPath()
+
+            func drawSparkle(x: CGFloat, y: CGFloat, radius: CGFloat) {
+                let waist = radius * 0.28
+                context.addLines(between: [
+                    CGPoint(x: x, y: y + radius), CGPoint(x: x + waist, y: y + waist),
+                    CGPoint(x: x + radius, y: y), CGPoint(x: x + waist, y: y - waist),
+                    CGPoint(x: x, y: y - radius), CGPoint(x: x - waist, y: y - waist),
+                    CGPoint(x: x - radius, y: y), CGPoint(x: x - waist, y: y + waist)
+                ])
+                context.closePath()
+                context.fillPath()
+            }
+
+            drawSparkle(x: 18.5, y: 14.3, radius: 2.7)
+            drawSparkle(x: 4, y: 3, radius: 1.55)
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "Flynamic Island"
+        return image
+    }()
+
     let music = MusicModel()
     let island = IslandState()
     let stats = SystemStatsModel()
@@ -1272,7 +1301,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         island.pinned = UserDefaults.standard.bool(forKey: "keepExpanded")
         resize(island.pinned, animate: false)
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "FLYnamic Island")
+        item.button?.image = Self.menuBarIcon
         let menu = NSMenu()
         menu.addItem(withTitle: "Show / hide island", action: #selector(toggleVisibility), keyEquivalent: "")
         menu.addItem(withTitle: "Keep expanded", action: #selector(togglePin), keyEquivalent: "")
