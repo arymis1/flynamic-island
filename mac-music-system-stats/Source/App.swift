@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import Combine
 import QuartzCore
+import OSLog
 
 struct AirPlayOutput: Identifiable {
     let id: String
@@ -62,6 +63,7 @@ final class MusicModel: ObservableObject {
     private var sourceSelection = MediaSourceSelection()
     private var selectionTimer: Timer?
     private var selectionPolling = false
+    private let chromeLog = Logger(subsystem: "local.aryan.music-island", category: "YouTubeMusic")
     private let chrome = ChromeBridge()
     private let chromeQueue = DispatchQueue(label: "local.music-island.chrome", qos: .userInitiated)
     private var chromePID: pid_t?
@@ -70,8 +72,9 @@ final class MusicModel: ObservableObject {
     private var chromePolling = false
     private var chromeAuthorizationRequest: UUID?
     private var chromeGeneration = 0
-    private(set) var chromeStatus = "closed"
-    private(set) var youtubeEnabled = UserDefaults.standard.bool(forKey: "youtubeMusicEnabled")
+    @Published private(set) var chromeStatus = "closed"
+    @Published private(set) var youtubeEnabled = UserDefaults.standard.bool(forKey: "youtubeMusicEnabled")
+    @Published private(set) var chromeIsRunning = false
     private(set) var preferredSource: MediaSource?
     var availableSources: Set<MediaSource> {
         var sources = Set(runningPIDs.keys)
@@ -183,13 +186,31 @@ final class MusicModel: ObservableObject {
         selectPlayer()
     }
 
+    func setupYouTubeMusic() {
+        guard youtubeEnabled else {
+            setYouTubeEnabled(true)
+            return
+        }
+        switch chromeStatus {
+        case "permission": requestChromeConsent()
+        case "denied", "permission-pending":
+            if let automation = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation") {
+                NSWorkspace.shared.open(automation)
+            }
+        case "closed", "idle": openYouTubeMusic()
+        default: refreshPlayers()
+        }
+    }
+
     func setYouTubeEnabled(_ enabled: Bool) {
         youtubeEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: "youtubeMusicEnabled")
-        refreshPlayers()
         if enabled {
+            updateChromeProcess(excludingPID: nil, probe: false)
             if chromePID == nil { openYouTubeMusic() }
             else { requestChromeConsent() }
+        } else {
+            refreshPlayers()
         }
     }
 
@@ -197,6 +218,7 @@ final class MusicModel: ObservableObject {
         guard youtubeEnabled, chromePID != nil, chromeAuthorizationRequest == nil else { return }
         let request = UUID()
         chromeAuthorizationRequest = request
+        chromeStatus = "permission-wait"
         let generation = chromeGeneration
         NSApp.activate(ignoringOtherApps: true)
         authorizationQueue.async {
@@ -205,15 +227,22 @@ final class MusicModel: ObservableObject {
                 guard self.chromeAuthorizationRequest == request else { return }
                 self.chromeAuthorizationRequest = nil
                 guard self.chromeGeneration == generation else { return }
-                self.chromeStatus = result == 0 ? "connecting" : "denied"
+                self.chromeLog.info("Chrome Automation check returned \(result)")
+                self.chromeStatus = result == 0 ? "connecting" : result == -1743 ? "denied" : "permission"
                 self.probeChrome()
             }
         }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
+            guard let self, self.chromeGeneration == generation, self.chromeAuthorizationRequest == request else { return }
+            self.chromeStatus = "permission-pending"
+        }
     }
 
-    private func updateChromeProcess(excludingPID: pid_t?) {
-        let pid = youtubeEnabled ? NSRunningApplication.runningApplications(withBundleIdentifier: MediaSource.youtubeMusic.bundleIdentifier)
-            .first(where: { !$0.isTerminated && $0.processIdentifier != excludingPID })?.processIdentifier : nil
+    private func updateChromeProcess(excludingPID: pid_t?, probe: Bool = true) {
+        let runningPID = NSRunningApplication.runningApplications(withBundleIdentifier: MediaSource.youtubeMusic.bundleIdentifier)
+            .first(where: { !$0.isTerminated && $0.processIdentifier != excludingPID })?.processIdentifier
+        if chromeIsRunning != (runningPID != nil) { chromeIsRunning = runningPID != nil }
+        let pid = youtubeEnabled ? runningPID : nil
         if pid != chromePID {
             chromeGeneration += 1
             chromePID = pid
@@ -221,20 +250,29 @@ final class MusicModel: ObservableObject {
             chromePlaying = false
             chromeStatus = pid == nil ? "closed" : "connecting"
         }
-        probeChrome()
+        if probe { probeChrome() }
     }
 
     private func probeChrome() {
-        guard chromePID != nil, !chromePolling else { return }
+        guard chromePID != nil, chromeAuthorizationRequest == nil, !chromePolling else { return }
         chromePolling = true
         let generation = chromeGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
+            guard let self, self.chromeGeneration == generation, self.chromePolling,
+                  self.chromeStatus == "connecting" else { return }
+            self.chromeStatus = "permission-pending"
+        }
         chromeQueue.async {
             let snapshot = self.chrome.snapshot()
             DispatchQueue.main.async {
                 self.chromePolling = false
                 guard self.chromeGeneration == generation else { return }
-                self.chromeStatus = snapshot["status"] as? String ?? "error"
-                self.chromeTrackAvailable = self.chromeStatus == "track"
+                let status = snapshot["status"] as? String ?? "error"
+                if self.chromeStatus != status {
+                    self.chromeLog.info("Chrome player status: \(status, privacy: .public)")
+                    self.chromeStatus = status
+                }
+                self.chromeTrackAvailable = status == "track"
                 self.chromePlaying = self.source == .youtubeMusic && self.playbackSync.pending != nil
                     ? self.playing : snapshot["playing"] as? Bool == true
                 self.selectPlayer()
@@ -650,7 +688,7 @@ final class MusicModel: ObservableObject {
             }
         }
     }
-    private func openYouTubeMusic() {
+    func openYouTubeMusic() {
         guard let chrome = NSWorkspace.shared.urlForApplication(withBundleIdentifier: MediaSource.youtubeMusic.bundleIdentifier),
               let page = URL(string: "https://music.youtube.com/") else { return }
         NSWorkspace.shared.open([page], withApplicationAt: chrome,
@@ -1020,6 +1058,22 @@ struct IslandView: View {
                     Text("System").font(.system(size: 14, weight: .semibold))
                 }
                 Spacer()
+                if music.chromeIsRunning && music.chromeStatus != "track" {
+                    let label: String = switch (music.youtubeEnabled, music.chromeStatus) {
+                    case (false, _): "Enable YouTube Music"
+                    case (true, "permission"): "Allow Chrome Automation"
+                    case (true, "denied"), (true, "permission-pending"): "Open Automation Settings"
+                    case (true, "permission-wait"): "Waiting for Chrome permission…"
+                    case (true, "chrome-setting"): "Enable Chrome JavaScript access"
+                    case (true, "connecting"): "Connecting to YouTube Music…"
+                    case (true, "idle"): "Open YouTube Music"
+                    default: "Retry YouTube Music"
+                    }
+                    Button(label) { music.setupYouTubeMusic() }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .disabled(music.youtubeEnabled && ["connecting", "chrome-setting", "permission-wait"].contains(music.chromeStatus))
+                }
                 if music.isMusicRunning {
                     HStack(spacing: 5) {
                         Circle().fill(.white.opacity(0.8 - musicPageMix * 0.6))
@@ -1200,7 +1254,7 @@ final class IslandPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemValidation {
     let music = MusicModel()
     let island = IslandState()
     let stats = SystemStatsModel()
@@ -1245,6 +1299,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let player = NSMenuItem(title: "Player", action: nil, keyEquivalent: "")
         player.submenu = NSMenu(title: "Player")
         menu.addItem(player)
+        menu.addItem(withTitle: "Enable YouTube Music…", action: #selector(setupYouTubeMusic), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit FLYnamic Island", action: #selector(quit), keyEquivalent: "q")
         for entry in menu.items { entry.target = self }
@@ -1369,8 +1424,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func choosePlayer(_ item: NSMenuItem) {
         music.choosePlayer((item.representedObject as? String).flatMap(MediaSource.init(rawValue:)))
     }
-    @objc private func toggleYouTubeMusic() { music.setYouTubeEnabled(!music.youtubeEnabled) }
-    @objc private func connectYouTubeMusic() { music.requestChromeConsent() }
+    @objc private func disableYouTubeMusic() { music.setYouTubeEnabled(false) }
+    @objc private func setupYouTubeMusic() { music.setupYouTubeMusic() }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         if let submenu = menu.item(withTitle: "Player")?.submenu {
@@ -1384,22 +1439,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 player.representedObject = source.rawValue
                 player.state = music.preferredSource == source ? .on : .off
             }
-            submenu.addItem(.separator())
-            let toggle = submenu.addItem(withTitle: "YouTube Music in Chrome", action: #selector(toggleYouTubeMusic), keyEquivalent: "")
-            toggle.target = self
-            toggle.state = music.youtubeEnabled ? .on : .off
-            if music.youtubeEnabled, ["permission", "denied"].contains(music.chromeStatus) {
-                let connect = submenu.addItem(withTitle: "Connect YouTube Music…", action: #selector(connectYouTubeMusic), keyEquivalent: "")
-                connect.target = self
+            if music.youtubeEnabled {
+                submenu.addItem(.separator())
+                let disable = submenu.addItem(withTitle: "Disable YouTube Music", action: #selector(disableYouTubeMusic), keyEquivalent: "")
+                disable.target = self
             }
-            if music.youtubeEnabled, music.chromeStatus == "chrome-setting" {
-                let hint = NSMenuItem(title: "In Chrome, enable Allow JavaScript from Apple Events", action: nil, keyEquivalent: "")
-                submenu.addItem(hint)
+        }
+        if let setup = menu.items.first(where: { $0.action == #selector(setupYouTubeMusic) }) {
+            let title: String
+            switch (music.youtubeEnabled, music.chromeStatus) {
+            case (false, _): title = "Enable YouTube Music…"
+            case (true, "track"): title = "YouTube Music connected"
+            case (true, "closed"): title = "Open YouTube Music in Chrome"
+            case (true, "idle"): title = "Open a song in YouTube Music"
+            case (true, "permission"): title = "Allow Chrome Automation…"
+            case (true, "denied"), (true, "permission-pending"): title = "Open Chrome Automation Settings…"
+            case (true, "permission-wait"): title = "Waiting for Chrome permission…"
+            case (true, "chrome-setting"): title = "Chrome needs JavaScript from Apple Events"
+            case (true, "connecting"): title = "Connecting to YouTube Music…"
+            default: title = "Retry YouTube Music connection"
             }
+            setup.title = title
         }
         for entry in menu.items where entry.action == #selector(toggleVisibility) || entry.action == #selector(togglePin) {
             entry.isEnabled = true
         }
+    }
+    @objc func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        guard item.action == #selector(setupYouTubeMusic), music.youtubeEnabled else { return true }
+        return !["track", "chrome-setting", "connecting", "permission-wait"].contains(music.chromeStatus)
     }
     @objc func quit() { NSApp.terminate(nil) }
     func applicationWillTerminate(_ notification: Notification) {

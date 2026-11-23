@@ -31,7 +31,7 @@ PLIST
 /usr/libexec/PlistBuddy -c 'Delete :NSAudioCaptureUsageDescription' "$bundle/Contents/Info.plist" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Set :NSAppleEventsUsageDescription FLYnamic Island shows the current song and controls playback in Apple Music, Spotify, or YouTube Music in Chrome when enabled.' "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString 1.4' "$bundle/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 33' "$bundle/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 36' "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Delete :NSLocationUsageDescription' "$bundle/Contents/Info.plist" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Delete :NSLocationWhenInUseUsageDescription' "$bundle/Contents/Info.plist" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Set :CFBundleName FLYnamic Island' "$bundle/Contents/Info.plist"

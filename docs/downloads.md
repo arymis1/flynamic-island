@@ -5,7 +5,7 @@ Choose the edition for your music player and Mac processor. The combined preview
 | Edition | Installer version / build | GitHub DMG | Google Drive |
 | --- | --- | --- | --- |
 | Music only, Apple silicon | 1.2 / 5 | [Download](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-01/FLYnamic-Island-Music-Only-Apple-Silicon.dmg) | [Drive](https://drive.google.com/file/d/13cvpgZbwxjsyUvCEzO9qxehmhOHajvrQ/view) |
-| Music + System Stats (combined), Apple silicon | 1.4 / 33 | [Download preview](https://github.com/arymis1/flynamic-island/releases/download/mac-combined-1.4/Flynamic-Island-Combined.dmg) | |
+| Music + System Stats (combined), Apple silicon | 1.4 / 36 | [Download preview](https://github.com/arymis1/flynamic-island/releases/download/mac-combined-1.4-build36/Flynamic-Island-Combined.dmg) | |
 | Intel Mac Music + System Stats | 1.3 / 25 | [Download](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-01/FLYnamic-Island-Intel.dmg) | [Drive](https://drive.google.com/file/d/1rxc1DkYaafZZ37GbAXiMdj2ldSehNJL2/view) |
 
 The [release manifest](release-manifest.json) lists sizes and SHA-256 hashes for the original installers.

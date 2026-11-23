@@ -47,11 +47,24 @@
 }
 - (id)eventDidFail:(const AppleEvent *)event withError:(NSError *)error { self.lastError = error; return nil; }
 - (NSInteger)permissionRequestingConsent:(BOOL)request {
-    const char *bundle = "com.google.Chrome";
+    if (![self connect]) return procNotFound;
+    pid_t pid = self.pid;
     AEAddressDesc target = {typeNull, NULL};
-    OSStatus status = AECreateDesc(typeApplicationBundleID, bundle, strlen(bundle), &target);
-    if (!status) { status = AEDeterminePermissionToAutomateTarget(&target, typeWildCard, typeWildCard, request); AEDisposeDesc(&target); }
-    return status;
+    OSStatus status = AECreateDesc(typeKernelProcessID, &pid, sizeof(pid), &target);
+    if (status != noErr) return status;
+    status = AEDeterminePermissionToAutomateTarget(&target, typeWildCard, typeWildCard, false);
+    AEDisposeDesc(&target);
+    if (!request || status != errAEEventWouldRequireUserConsent) return status;
+
+    // Use the same read-only Chrome event as detection to present consent.
+    self.lastError = nil;
+    self.application.sendMode = kAEWaitReply | kAECanInteract | kAECanSwitchLayer;
+    @try {
+        __unused NSUInteger count = [(id<YTChromeApplication>)self.application windows].count;
+        return self.lastError ? self.lastError.code : noErr;
+    } @catch (NSException *exception) {
+        return errAEEventFailed;
+    }
 }
 - (NSDictionary *)run:(id<YTChromeTab>)tab request:(NSDictionary *)request {
     self.lastError = nil;
