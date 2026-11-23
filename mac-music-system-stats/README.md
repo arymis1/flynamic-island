@@ -4,7 +4,7 @@ Apple Music, Spotify desktop, and YouTube Music in Chrome, with CPU/RAM stats an
 
 The compact bars animate when a song plays and settle into dots when paused. They use playback state and require no system audio capture. The expanded panel uses Liquid Glass on macOS 26 and later.
 
-Build with `./build.sh` on macOS with Xcode command-line tools. The result stays in this folder and is not installed or launched automatically. See the [root README](../README.md) for permissions and packaging.
+Build with `./build.sh` on macOS with Xcode command-line tools. The result stays in this folder and is not installed or launched automatically. See [setup](../docs/downloads.md).
 
 ## YouTube Music setup
 
@@ -16,4 +16,4 @@ Choose **Player → Automatic** to follow playback or pick a connected player to
 
 ## Download
 
-[Download the combined DMG on GitHub](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Combined.dmg) (version 1.4, build 37)
+[DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Combined.dmg) (version 1.4, build 37)

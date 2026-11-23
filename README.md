@@ -1,43 +1,21 @@
 # Flynamic Island
 
-Flynamic Island puts now-playing artwork and playback controls at the top of your Mac’s screen. Choose an edition based on your player and Mac.
+Now-playing artwork and music controls at the top of your Mac’s screen.
 
-| Edition | Folder & download | Processor | Players | CPU/RAM stats |
+| Edition | Mac | Players | CPU/RAM | Download |
 | --- | --- | --- | --- | --- |
-| Music only | [mac-music-only](mac-music-only)<br>[Download Music Only DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Music-Only.dmg) | Apple silicon | Apple Music, Spotify desktop | No |
-| Music + System Stats | [mac-music-system-stats](mac-music-system-stats)<br>[Download combined DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Combined.dmg) | Apple silicon | Apple Music, Spotify desktop, YouTube Music in Chrome | Yes, two-finger swipe |
-| Intel Mac | [mac-intel](mac-intel)<br>[Download Intel DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Intel.dmg) | Intel x86_64 | Apple Music, Spotify desktop | Yes, two-finger swipe |
+| [Music Only](mac-music-only) | Apple silicon | Apple Music, Spotify | No | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Music-Only.dmg) |
+| [Music + Stats](mac-music-system-stats) | Apple silicon | Apple Music, Spotify, YouTube Music in Chrome | Yes | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Combined.dmg) |
+| [Intel](mac-intel) | Intel | Apple Music, Spotify | Yes | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Intel.dmg) |
 
-## Downloads
+## Install
 
-Choose one of the three editions above. The [combined edition](https://github.com/arymis1/flynamic-island/releases/tag/mac-editions-2026-11-23-build37) adds YouTube Music to Music + System Stats. To connect Chrome, choose **Enable YouTube Music** in the waveform menu. The [download guide](docs/downloads.md) has installation steps and earlier installers.
+Requires macOS 14 or later. Open the DMG, drag Flynamic into Applications, and open it. See [setup](docs/downloads.md) for updates and first-launch permissions.
 
-All editions require macOS 14 or later. Optional system audio analysis requires macOS 14.2 or later and system audio permission. See [privacy and permissions](docs/privacy.md) for which builds use it. The installers are ad-hoc signed, and macOS may show a first-launch warning. [Installation steps](docs/downloads.md)
+In Music + Stats, use the waveform menu to **Enable YouTube Music**. See [Chrome setup](mac-music-system-stats#youtube-music-setup).
 
 ## Build
 
-On a Mac with Xcode command-line tools, run the edition's build script:
+With Xcode command-line tools installed, run `./build.sh` from your edition’s folder. The app appears in that folder.
 
-```sh
-cd mac-music-system-stats
-./build.sh
-```
-
-The app is created in that edition's directory. Building does not install, launch, or replace the running app. The Intel script targets `x86_64`. The Apple silicon editions target `arm64`. The same explicit target is used for Swift and Objective-C.
-
-For a clean installer containing only the app:
-
-```sh
-python3 tools/package.py --app 'mac-music-system-stats/FLYnamic Island.app' --output release/FLYnamic-Island.dmg
-```
-
-## Development notes
-
-- The Intel edition uses the original Music + System Stats code and the layout for Macs without a notch. Intel checks ran through Rosetta. A physical Intel Mac remains untested.
-- YouTube Music in the combined edition requires Chrome Automation permission and **View → Developer → Allow JavaScript from Apple Events** in Chrome. The waveform menu lets you choose **Player → Automatic** or pick a connected player.
-- Apple Music supports Favorites. Spotify's desktop scripting interface does not expose adding to Liked Songs.
-- Paused music keeps flat dots. Artwork, album colors, playback controls, sound output selection and hover animations are preserved from the relevant edition.
-- Stats read macOS counters directly; Activity Monitor does not need to be open. Memory graph height shows usage, while its color follows system memory pressure.
-- Lock-screen work is paused. Historical helper files retained in source are not part of the normal build scripts. There is no Internet-speed page.
-
-See [verification](docs/verification.md), [privacy](docs/privacy.md), and [third-party notices](THIRD_PARTY_NOTICES.md). Third-party notices cover the files they identify. The original application code has no license granted here.
+[Privacy](docs/privacy.md) · [Verification](docs/verification.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
