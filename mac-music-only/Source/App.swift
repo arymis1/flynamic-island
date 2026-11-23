@@ -609,10 +609,12 @@ struct CircleControl: View {
 }
 
 struct MusicScrubber: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var value: Double
     var upperBound: Double
     var tint: Color
     var label: String
+    var expandsOnDrag = false
     var onEditingChanged: (Bool) -> Void
     @State private var dragging = false
     @State private var hovered = false
@@ -620,11 +622,23 @@ struct MusicScrubber: View {
         GeometryReader { geometry in
             let fraction = IslandLogic.boundedPosition(value, duration: max(1, upperBound)) / max(1, upperBound)
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.17)).frame(height: 3)
-                Capsule().fill(tint).frame(width: max(0, geometry.size.width * fraction), height: 3)
-                Circle().fill(tint).frame(width: 7, height: 7)
-                    .offset(x: max(0, geometry.size.width * fraction - 3.5))
-                    .opacity(dragging || hovered ? 1 : 0)
+                if expandsOnDrag {
+                    ZStack(alignment: .leading) {
+                        Rectangle().fill(.white.opacity(dragging ? 0.28 : 0.17))
+                        Rectangle().fill(dragging ? .white : tint)
+                            .frame(width: geometry.size.width * fraction)
+                    }
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.16)) { track in
+                        track.frame(height: dragging ? 10 : 3)
+                            .clipShape(Capsule())
+                    }
+                } else {
+                    Capsule().fill(.white.opacity(0.17)).frame(height: 3)
+                    Capsule().fill(tint).frame(width: geometry.size.width * fraction, height: 3)
+                    Circle().fill(tint).frame(width: 7, height: 7)
+                        .offset(x: max(0, geometry.size.width * fraction - 3.5))
+                        .opacity(dragging || hovered ? 1 : 0)
+                }
             }.frame(height: 18).contentShape(Rectangle())
                 .onHover { hovered = $0 }
                 .gesture(DragGesture(minimumDistance: 0).onChanged { gesture in
@@ -760,7 +774,7 @@ struct IslandView: View {
                 TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !music.playing || !island.expanded)) { _ in
                     let livePosition = music.currentPosition()
                     VStack(spacing: 0) {
-                    MusicScrubber(value: Binding(get: { seeking ? seekDraft : livePosition }, set: { seekDraft = $0 }), upperBound: music.duration, tint: lightArtworkTint, label: "Track position", onEditingChanged: { editing in
+                    MusicScrubber(value: Binding(get: { seeking ? seekDraft : livePosition }, set: { seekDraft = $0 }), upperBound: music.duration, tint: lightArtworkTint, label: "Track position", expandsOnDrag: true, onEditingChanged: { editing in
                         seeking = editing
                         if !editing { music.command("seek", value: seekDraft) }
                     }).disabled(music.duration <= 0)
