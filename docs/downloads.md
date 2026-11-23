@@ -1,12 +1,12 @@
 # Mac downloads
 
-Choose the edition for your music player and Mac processor. The combined preview includes YouTube Music, Apple Music, and Spotify in one app.
+Choose the edition for your music player and Mac processor. The combined edition includes YouTube Music, Apple Music, and Spotify in one app.
 
-| Edition | Installer version / build | GitHub DMG | Google Drive |
-| --- | --- | --- | --- |
-| Music only, Apple silicon | 1.2 / 5 | [Download](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-01/FLYnamic-Island-Music-Only-Apple-Silicon.dmg) | [Drive](https://drive.google.com/file/d/13cvpgZbwxjsyUvCEzO9qxehmhOHajvrQ/view) |
-| Music + System Stats (combined), Apple silicon | 1.4 / 36 | [Download preview](https://github.com/arymis1/flynamic-island/releases/download/mac-combined-1.4-build36/Flynamic-Island-Combined.dmg) | |
-| Intel Mac Music + System Stats | 1.3 / 25 | [Download](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-01/FLYnamic-Island-Intel.dmg) | [Drive](https://drive.google.com/file/d/1rxc1DkYaafZZ37GbAXiMdj2ldSehNJL2/view) |
+| Edition | Installer version / build | GitHub DMG |
+| --- | --- | --- |
+| Music only, Apple silicon | 1.2 / 9 | [Download](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Music-Only.dmg) |
+| Music + System Stats (combined), Apple silicon | 1.4 / 37 | [Download](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Combined.dmg) |
+| Intel Mac Music + System Stats | 1.3 / 25 | [Download](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Intel.dmg) |
 
 The [release manifest](release-manifest.json) lists sizes and SHA-256 hashes for the original installers.
 
@@ -22,3 +22,5 @@ Music Only, Music + System Stats, and Intel share an app name and bundle identit
 | --- | --- | --- | --- |
 | Music + System Stats, Apple silicon | 1.3 / 25 | [Download](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-01/FLYnamic-Island-Music-System-Stats-Apple-Silicon.dmg) | [Drive](https://drive.google.com/file/d/1krZzsMbrvYTMSnyBAsTGMTQquP5BvggI/view) |
 | Browser YouTube Music + Stats, Apple silicon | 1.0 / 1 | [Download](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-01/FLYnamic-Island-Browser-YouTube-Music.dmg) | [Drive](https://drive.google.com/file/d/1uiuHCaczqXB1Yz0qnlAA5a4m9M_3TRtt/view) |
+| Music only, Apple silicon | 1.2 / 5 | [Download](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-01/FLYnamic-Island-Music-Only-Apple-Silicon.dmg) | [Drive](https://drive.google.com/file/d/13cvpgZbwxjsyUvCEzO9qxehmhOHajvrQ/view) |
+| Intel Mac Music + System Stats | 1.3 / 25 | [Download](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-01/FLYnamic-Island-Intel.dmg) | [Drive](https://drive.google.com/file/d/1rxc1DkYaafZZ37GbAXiMdj2ldSehNJL2/view) |

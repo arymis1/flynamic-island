@@ -72,9 +72,8 @@ final class MusicModel: ObservableObject {
     private var chromePolling = false
     private var chromeAuthorizationRequest: UUID?
     private var chromeGeneration = 0
-    @Published private(set) var chromeStatus = "closed"
-    @Published private(set) var youtubeEnabled = UserDefaults.standard.bool(forKey: "youtubeMusicEnabled")
-    @Published private(set) var chromeIsRunning = false
+    private(set) var chromeStatus = "closed"
+    private(set) var youtubeEnabled = UserDefaults.standard.bool(forKey: "youtubeMusicEnabled")
     private(set) var preferredSource: MediaSource?
     var availableSources: Set<MediaSource> {
         var sources = Set(runningPIDs.keys)
@@ -239,10 +238,8 @@ final class MusicModel: ObservableObject {
     }
 
     private func updateChromeProcess(excludingPID: pid_t?, probe: Bool = true) {
-        let runningPID = NSRunningApplication.runningApplications(withBundleIdentifier: MediaSource.youtubeMusic.bundleIdentifier)
-            .first(where: { !$0.isTerminated && $0.processIdentifier != excludingPID })?.processIdentifier
-        if chromeIsRunning != (runningPID != nil) { chromeIsRunning = runningPID != nil }
-        let pid = youtubeEnabled ? runningPID : nil
+        let pid = youtubeEnabled ? NSRunningApplication.runningApplications(withBundleIdentifier: MediaSource.youtubeMusic.bundleIdentifier)
+            .first(where: { !$0.isTerminated && $0.processIdentifier != excludingPID })?.processIdentifier : nil
         if pid != chromePID {
             chromeGeneration += 1
             chromePID = pid
@@ -1058,22 +1055,6 @@ struct IslandView: View {
                     Text("System").font(.system(size: 14, weight: .semibold))
                 }
                 Spacer()
-                if music.chromeIsRunning && music.chromeStatus != "track" {
-                    let label: String = switch (music.youtubeEnabled, music.chromeStatus) {
-                    case (false, _): "Enable YouTube Music"
-                    case (true, "permission"): "Allow Chrome Automation"
-                    case (true, "denied"), (true, "permission-pending"): "Open Automation Settings"
-                    case (true, "permission-wait"): "Waiting for Chrome permission…"
-                    case (true, "chrome-setting"): "Enable Chrome JavaScript access"
-                    case (true, "connecting"): "Connecting to YouTube Music…"
-                    case (true, "idle"): "Open YouTube Music"
-                    default: "Retry YouTube Music"
-                    }
-                    Button(label) { music.setupYouTubeMusic() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .disabled(music.youtubeEnabled && ["connecting", "chrome-setting", "permission-wait"].contains(music.chromeStatus))
-                }
                 if music.isMusicRunning {
                     HStack(spacing: 5) {
                         Circle().fill(.white.opacity(0.8 - musicPageMix * 0.6))

@@ -8,4 +8,6 @@ Build with `./build.sh` on macOS with Xcode command-line tools. The result stays
 
 ## Download
 
-[Download the DMG on Google Drive](https://drive.google.com/file/d/13cvpgZbwxjsyUvCEzO9qxehmhOHajvrQ/view) (version 1.2, build 5)
+[Download the current DMG on GitHub](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Music-Only.dmg) (version 1.2, build 9)
+
+[Original installer on Google Drive](https://drive.google.com/file/d/13cvpgZbwxjsyUvCEzO9qxehmhOHajvrQ/view) (version 1.2, build 5)

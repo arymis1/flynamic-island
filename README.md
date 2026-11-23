@@ -4,13 +4,13 @@ Flynamic Island puts now-playing artwork and playback controls at the top of you
 
 | Edition | Folder & download | Processor | Players | CPU/RAM stats |
 | --- | --- | --- | --- | --- |
-| Music only | [mac-music-only](mac-music-only)<br>[Download DMG on Drive](https://drive.google.com/file/d/13cvpgZbwxjsyUvCEzO9qxehmhOHajvrQ/view) | Apple silicon | Apple Music, Spotify desktop | No |
-| Music + System Stats | [mac-music-system-stats](mac-music-system-stats)<br>[Download combined DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-combined-1.4-build36/Flynamic-Island-Combined.dmg) | Apple silicon | Apple Music, Spotify desktop, YouTube Music in Chrome | Yes, two-finger swipe |
-| Intel Mac | [mac-intel](mac-intel)<br>[Download DMG on Drive](https://drive.google.com/file/d/1rxc1DkYaafZZ37GbAXiMdj2ldSehNJL2/view) | Intel x86_64 | Apple Music, Spotify desktop | Yes, two-finger swipe |
+| Music only | [mac-music-only](mac-music-only)<br>[Download Music Only DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Music-Only.dmg) | Apple silicon | Apple Music, Spotify desktop | No |
+| Music + System Stats | [mac-music-system-stats](mac-music-system-stats)<br>[Download combined DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Combined.dmg) | Apple silicon | Apple Music, Spotify desktop, YouTube Music in Chrome | Yes, two-finger swipe |
+| Intel Mac | [mac-intel](mac-intel)<br>[Download Intel DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Intel.dmg) | Intel x86_64 | Apple Music, Spotify desktop | Yes, two-finger swipe |
 
 ## Downloads
 
-Choose one of the three editions above. The [combined preview](https://github.com/arymis1/flynamic-island/releases/tag/mac-combined-1.4-build36) adds YouTube Music to Music + System Stats. Choose **Enable YouTube Music** on the expanded island or in the waveform menu. The [download guide](docs/downloads.md) has installation steps and earlier installers.
+Choose one of the three editions above. The [combined edition](https://github.com/arymis1/flynamic-island/releases/tag/mac-editions-2026-11-23-build37) adds YouTube Music to Music + System Stats. To connect Chrome, choose **Enable YouTube Music** in the waveform menu. The [download guide](docs/downloads.md) has installation steps and earlier installers.
 
 All editions require macOS 14 or later. Optional system audio analysis requires macOS 14.2 or later and system audio permission. See [privacy and permissions](docs/privacy.md) for which builds use it. The installers are ad-hoc signed, and macOS may show a first-launch warning. [Installation steps](docs/downloads.md)
 
@@ -23,7 +23,7 @@ cd mac-music-system-stats
 ./build.sh
 ```
 
-The app is created in that edition's directory. Building does not install, launch, or replace the running app. The Intel script targets `x86_64`; the other three target `arm64`. The same explicit target is used for Swift and Objective-C.
+The app is created in that edition's directory. Building does not install, launch, or replace the running app. The Intel script targets `x86_64`. The Apple silicon editions target `arm64`. The same explicit target is used for Swift and Objective-C.
 
 For a clean installer containing only the app:
 

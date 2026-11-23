@@ -6,4 +6,6 @@ Build with `./build.sh` on macOS with Xcode command-line tools. The result stays
 
 ## Download
 
-[Download the DMG on Google Drive](https://drive.google.com/file/d/1rxc1DkYaafZZ37GbAXiMdj2ldSehNJL2/view) (version 1.3, build 25)
+[Download the current DMG on GitHub](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-23-build37/Flynamic-Island-Intel.dmg) (version 1.3, build 25)
+
+[Original installer on Google Drive](https://drive.google.com/file/d/1rxc1DkYaafZZ37GbAXiMdj2ldSehNJL2/view) (version 1.3, build 25)

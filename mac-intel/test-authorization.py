@@ -2,8 +2,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-root = Path(__file__).resolve().parents[2]
-src = root / 'outputs/music-island/Source'
+root = Path(__file__).resolve().parent
+src = root / 'Source'
 model = (src / 'App.swift').read_text().split('final class IslandState:')[0]
 # Substitute only OS boundaries: deterministic processes and permission results.
 start = model.index('        var pids: [MediaSource: pid_t] = [:]')
@@ -88,8 +88,8 @@ with tempfile.TemporaryDirectory(prefix='flynamic-auth-tests-') as tmp:
     tmp = Path(tmp)
     (tmp/'Model.swift').write_text(model)
     (tmp/'Tests.swift').write_text(fixture)
-    build = root/'outputs/music-island/.build'
-    args = ['xcrun','swiftc','-swift-version','5','-parse-as-library','-import-objc-header',str(src/'MusicBridge.h'),str(tmp/'Model.swift'),str(tmp/'Tests.swift')]
+    build = root/'.build'
+    args = ['xcrun','swiftc','-target','x86_64-apple-macosx14.0','-swift-version','5','-parse-as-library','-import-objc-header',str(src/'MusicBridge.h'),str(tmp/'Model.swift'),str(tmp/'Tests.swift')]
     args += [str(src/f) for f in ['IslandLogic.swift','ArtworkAccent.swift','AudioVisualization.swift','SpotifyArtwork.swift','AppleArtwork.swift']]
     args += [str(build/'MusicBridge.o'),str(build/'AudioMeter.o')]
     for fw in ['AppKit','SwiftUI','ScriptingBridge','Carbon','QuartzCore','CoreAudio']: args += ['-framework',fw]
