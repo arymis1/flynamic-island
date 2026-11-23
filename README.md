@@ -2,12 +2,12 @@
 
 Flynamic Island puts now-playing artwork and playback controls at the top of your Mac’s screen. Choose an edition based on your player and Mac.
 
-| Edition | Folder | Processor | Players | CPU/RAM stats |
+| Edition | Folder & download | Processor | Players | CPU/RAM stats |
 | --- | --- | --- | --- | --- |
-| Music only | [mac-music-only](mac-music-only) | Apple silicon | Apple Music, Spotify desktop | No |
-| Music + System Stats | [mac-music-system-stats](mac-music-system-stats) | Apple silicon | Apple Music, Spotify desktop | Yes, two-finger swipe |
-| Browser music | [mac-browser](mac-browser) | Apple silicon | YouTube Music in Chrome | Yes, two-finger swipe |
-| Intel Mac | [mac-intel](mac-intel) | Intel x86_64 | Apple Music, Spotify desktop | Yes, two-finger swipe |
+| Music only | [mac-music-only](mac-music-only)<br>[Download DMG on Drive](https://drive.google.com/file/d/13cvpgZbwxjsyUvCEzO9qxehmhOHajvrQ/view) | Apple silicon | Apple Music, Spotify desktop | No |
+| Music + System Stats | [mac-music-system-stats](mac-music-system-stats)<br>[Download DMG on Drive](https://drive.google.com/file/d/1krZzsMbrvYTMSnyBAsTGMTQquP5BvggI/view) | Apple silicon | Apple Music, Spotify desktop | Yes, two-finger swipe |
+| Browser music | [mac-browser](mac-browser)<br>[Download DMG on Drive](https://drive.google.com/file/d/1uiuHCaczqXB1Yz0qnlAA5a4m9M_3TRtt/view) | Apple silicon | YouTube Music in Chrome | Yes, two-finger swipe |
+| Intel Mac | [mac-intel](mac-intel)<br>[Download DMG on Drive](https://drive.google.com/file/d/1rxc1DkYaafZZ37GbAXiMdj2ldSehNJL2/view) | Intel x86_64 | Apple Music, Spotify desktop | Yes, two-finger swipe |
 
 ## Downloads
 
