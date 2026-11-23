@@ -41,6 +41,7 @@ final class MusicModel: ObservableObject {
     @Published var duration = 0.0
     @Published private(set) var volume = 50.0
     private var volumeRevision = 0
+    private var volumeCommandInFlight = false
     private var pendingVolume: (target: Double, deadline: TimeInterval)?
     @Published var busy = false
     @Published var message = ""
@@ -345,7 +346,8 @@ final class MusicModel: ObservableObject {
     private func observeVolume(_ reported: Double, revision: Int) {
         guard revision == volumeRevision else { return }
         if let pendingVolume {
-            guard reported == pendingVolume.target ||
+            guard pendingVolume.deadline.isFinite,
+                  reported == pendingVolume.target ||
                     ProcessInfo.processInfo.systemUptime >= pendingVolume.deadline else { return }
             self.pendingVolume = nil
         }
@@ -355,22 +357,31 @@ final class MusicModel: ObservableObject {
     func setVolume(_ requested: Double) {
         guard authorized, status == "track", requested.isFinite else { return }
         let target = min(100, max(0, requested.rounded()))
+        guard target != volume else { return }
         volumeRevision += 1
-        let revision = volumeRevision
-        let generation = sessionGeneration
         pendingVolume = (target, .infinity)
         volume = target
         message = ""
+        sendVolumeIntent()
+    }
+
+    private func sendVolumeIntent() {
+        guard !volumeCommandInFlight, authorized, status == "track",
+              let pending = pendingVolume, !pending.deadline.isFinite else { return }
+        volumeCommandInFlight = true
+        let revision = volumeRevision
+        let generation = sessionGeneration
         let bridge = bridge
         queue.async {
-            let success = bridge.performCommand("volume", value: target)
+            let success = bridge.performCommand("volume", value: pending.target)
             DispatchQueue.main.async {
-                guard self.isMusicRunning, self.sessionGeneration == generation,
-                      self.volumeRevision == revision else { return }
-                // Ignore old player readings until the new value arrives.
-                if self.pendingVolume != nil {
-                    self.pendingVolume = (target, ProcessInfo.processInfo.systemUptime + (success ? 2 : 0))
+                self.volumeCommandInFlight = false
+                guard self.sessionGeneration == generation, self.volumeRevision == revision else {
+                    // Keep only the latest drag position while a command is in flight.
+                    self.sendVolumeIntent()
+                    return
                 }
+                self.pendingVolume = (pending.target, ProcessInfo.processInfo.systemUptime + (success ? 2 : 0))
                 if !success { self.message = "Music couldn’t change volume. Try again." }
                 self.refresh()
             }
@@ -686,7 +697,7 @@ struct MusicScrubber: View {
     var tint: Color
     var label: String
     var expandsOnDrag = false
-    var onEditingChanged: (Bool) -> Void
+    var onEditingChanged: (Bool) -> Void = { _ in }
     @State private var dragging = false
     @State private var hovered = false
     var body: some View {
@@ -748,8 +759,6 @@ struct IslandView: View {
     private func updateSampling() { stats.setSamplingEnabled(island.panelVisible) }
     @State private var seekDraft = 0.0
     @State private var seeking = false
-    @State private var volumeDraft = 50.0
-    @State private var adjustingVolume = false
     private let accent = Color(red: 1, green: 0.22, blue: 0.36)
     private var artworkTint: Color {
         Color(red: music.artworkAccent.red, green: music.artworkAccent.green, blue: music.artworkAccent.blue)
@@ -986,10 +995,8 @@ struct IslandView: View {
                 }
                 HStack(spacing: 9) {
                     Image(systemName: "speaker.fill").font(.system(size: 10))
-                    MusicScrubber(value: Binding(get: { adjustingVolume ? volumeDraft : music.volume }, set: { volumeDraft = $0 }), upperBound: 100, tint: .white.opacity(0.55), label: "Music volume", onEditingChanged: { editing in
-                        if !editing { music.setVolume(volumeDraft) }
-                        adjustingVolume = editing
-                    })
+                    MusicScrubber(value: Binding(get: { music.volume }, set: music.setVolume),
+                                  upperBound: 100, tint: .white.opacity(0.55), label: "Music volume")
                     Image(systemName: "speaker.wave.3.fill").font(.system(size: 10))
                 }.foregroundStyle(.white.opacity(0.35))
                 if !music.message.isEmpty { Text(music.message).font(.system(size: 9)).foregroundStyle(.orange) }

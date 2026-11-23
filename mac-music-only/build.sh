@@ -30,7 +30,7 @@ PLIST
 /usr/libexec/PlistBuddy -c 'Delete :NSAudioCaptureUsageDescription' "$bundle/Contents/Info.plist" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Set :NSAppleEventsUsageDescription FLYnamic Island shows the current song and controls playback in Spotify or Apple Music.' "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString 1.2' "$bundle/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 8' "$bundle/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 9' "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleName FLYnamic Island' "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName FLYnamic Island' "$bundle/Contents/Info.plist"
 codesign --force --sign - "$bundle"
