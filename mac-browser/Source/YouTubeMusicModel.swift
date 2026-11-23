@@ -80,7 +80,10 @@ final class MusicModel: ObservableObject {
     @Published var updatingShuffle = false
     @Published var position = 0.0
     @Published var duration = 0.0
-    @Published var volume = 50.0
+    @Published private(set) var volume = 50.0
+    private var volumeRevision = 0
+    private var volumeCommandInFlight = false
+    private var pendingVolume: (target: Double, deadline: TimeInterval)?
     @Published var busy = false
     @Published var message = ""
     @Published var airPlayOutputs: [AirPlayOutput] = []
@@ -118,6 +121,7 @@ final class MusicModel: ObservableObject {
         guard !polling else { return }
         polling = true
         let revision = playbackSync.revision
+        let volumeRevision = volumeRevision
         queue.async {
             let snapshot = self.bridge.snapshot()
             DispatchQueue.main.async {
@@ -129,6 +133,7 @@ final class MusicModel: ObservableObject {
                 self.status = status
                 guard status == "track" else {
                     self.trackID = ""; self.playbackSync.reset(); self.playing = false
+                    self.volumeRevision += 1; self.pendingVolume = nil
                     self.artwork = nil; self.artworkBackdrop = nil; self.artworkAccent = .fallback
                     self.loader.cancel(); self.visualizer.musicClosed()
                     return
@@ -137,13 +142,15 @@ final class MusicModel: ObservableObject {
                 let changed = id != self.trackID
                 if changed {
                     self.trackID = id; self.message = ""; self.playbackSync.reset()
+                    self.volumeRevision += 1; self.pendingVolume = nil
                     self.loader.cancel(); self.artwork = nil; self.artworkBackdrop = nil; self.artworkAccent = .fallback
                 }
                 self.title = snapshot["title"] as? String ?? "YouTube Music"
                 self.artist = snapshot["artist"] as? String ?? ""
                 self.album = snapshot["album"] as? String ?? ""
                 self.duration = snapshot["duration"] as? Double ?? 0
-                self.volume = snapshot["volume"] as? Double ?? 50
+                self.observeVolume(snapshot["volume"] as? Double ?? 50,
+                                   revision: changed ? self.volumeRevision : volumeRevision)
                 self.shuffleEnabled = snapshot["shuffle"] as? Bool ?? false
                 self.shuffleAvailable = snapshot["shuffleAvailable"] as? Bool ?? false
                 let nativePlaying = snapshot["playing"] as? Bool ?? false
@@ -171,6 +178,50 @@ final class MusicModel: ObservableObject {
         IslandLogic.playhead(position: position, anchor: anchor, now: ProcessInfo.processInfo.systemUptime, playing: playing, duration: duration)
     }
     func refreshPlayback() { refresh() }
+    private func observeVolume(_ reported: Double, revision: Int) {
+        guard revision == volumeRevision else { return }
+        if let pendingVolume {
+            guard pendingVolume.deadline.isFinite,
+                  abs(reported - pendingVolume.target) < 0.001 ||
+                    ProcessInfo.processInfo.systemUptime >= pendingVolume.deadline else { return }
+            self.pendingVolume = nil
+        }
+        if volume != reported { volume = reported }
+    }
+
+    func setVolume(_ requested: Double) {
+        guard status == "track", requested.isFinite else { return }
+        let target = min(100, max(0, requested.rounded()))
+        guard target != volume else { return }
+        volumeRevision += 1
+        pendingVolume = (target, .infinity)
+        volume = target
+        message = ""
+        sendVolumeIntent()
+    }
+
+    private func sendVolumeIntent() {
+        guard !volumeCommandInFlight, status == "track",
+              let pending = pendingVolume, !pending.deadline.isFinite else { return }
+        volumeCommandInFlight = true
+        let revision = volumeRevision
+        let id = trackID
+        queue.async {
+            let success = self.bridge.performCommand("volume", value: pending.target, trackID: id)
+            DispatchQueue.main.async {
+                self.volumeCommandInFlight = false
+                guard self.trackID == id, self.volumeRevision == revision else {
+                    // Keep only the latest drag position while a command is in flight.
+                    self.sendVolumeIntent()
+                    return
+                }
+                self.pendingVolume = (pending.target, ProcessInfo.processInfo.systemUptime + (success ? 2 : 0))
+                if !success { self.message = "YouTube Music couldn’t change volume. Try again." }
+                self.refresh()
+            }
+        }
+    }
+
     func command(_ command: String, value: Double = 0) {
         guard status == "track" else { return }
         if command == "playpause" {

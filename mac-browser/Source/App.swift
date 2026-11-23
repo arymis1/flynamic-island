@@ -133,7 +133,7 @@ struct MusicScrubber: View {
     var tint: Color
     var label: String
     var expandsOnDrag = false
-    var onEditingChanged: (Bool) -> Void
+    var onEditingChanged: (Bool) -> Void = { _ in }
     @State private var dragging = false
     @State private var hovered = false
     var body: some View {
@@ -195,8 +195,6 @@ struct IslandView: View {
     private func updateSampling() { stats.setSamplingEnabled(island.panelVisible) }
     @State private var seekDraft = 0.0
     @State private var seeking = false
-    @State private var volumeDraft = 50.0
-    @State private var adjustingVolume = false
     private let accent = Color(red: 1, green: 0.22, blue: 0.36)
     private var artworkTint: Color {
         Color(red: music.artworkAccent.red, green: music.artworkAccent.green, blue: music.artworkAccent.blue)
@@ -404,10 +402,8 @@ struct IslandView: View {
                 }
                 HStack(spacing: 9) {
                     Image(systemName: "speaker.fill").font(.system(size: 10))
-                    MusicScrubber(value: Binding(get: { adjustingVolume ? volumeDraft : music.volume }, set: { volumeDraft = $0 }), upperBound: 100, tint: .white.opacity(0.55), label: "Music volume", onEditingChanged: { editing in
-                        adjustingVolume = editing
-                        if !editing { music.command("volume", value: volumeDraft) }
-                    })
+                    MusicScrubber(value: Binding(get: { music.volume }, set: music.setVolume),
+                                  upperBound: 100, tint: .white.opacity(0.55), label: "Music volume")
                     Image(systemName: "speaker.wave.3.fill").font(.system(size: 10))
                 }.foregroundStyle(.white.opacity(0.35))
                 if !music.message.isEmpty { Text(music.message).font(.system(size: 9)).foregroundStyle(.orange) }

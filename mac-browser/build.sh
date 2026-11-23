@@ -32,7 +32,7 @@ PLIST
 /usr/libexec/PlistBuddy -c 'Set :NSAudioCaptureUsageDescription FLYnamic YT Music analyzes Chrome audio to animate live level bars. Other Chrome tabs can contribute audio. Audio is never saved or uploaded.' "$bundle/Contents/Info.plist" 2>/dev/null || /usr/libexec/PlistBuddy -c 'Add :NSAudioCaptureUsageDescription string FLYnamic YT Music analyzes Chrome audio to animate live level bars. Other Chrome tabs can contribute audio. Audio is never saved or uploaded.' "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :NSAppleEventsUsageDescription FLYnamic YT Music reads song information and controls playback in YouTube Music tabs in Chrome. No other page content is read.' "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString 1.0' "$bundle/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 2' "$bundle/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 3' "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Delete :NSLocationUsageDescription' "$bundle/Contents/Info.plist" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Delete :NSLocationWhenInUseUsageDescription' "$bundle/Contents/Info.plist" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Set :CFBundleName FLYnamic YT Music' "$bundle/Contents/Info.plist"
