@@ -1,6 +1,6 @@
 # Flynamic Island
 
-A small Mac music companion that lives near the top of the screen. This private repository keeps the four Mac editions together.
+A small Mac music companion that lives near the top of the screen. This public repository keeps the four Mac editions together.
 
 | Edition | Folder | Processor | Players | CPU/RAM stats |
 | --- | --- | --- | --- | --- |
