@@ -1,6 +1,6 @@
 # Privacy and permissions
 
-Desktop editions read metadata and control playback through Scripting Bridge. macOS controls Automation consent. Music + Stats accesses matching `music.youtube.com` tabs through Chrome Apple Events. This requires Chrome’s JavaScript-from-Apple-Events setting. It starts checking Chrome after you select **Enable YouTube Music** in the pill-and-sparkles menu. Enabling that Chrome setting is broader than a per-site permission, although this application's bridge restricts its page commands to the YouTube Music HTTPS origin.
+Desktop editions read metadata and control playback through Scripting Bridge. macOS controls Automation consent. Music + Stats accesses matching `music.youtube.com` tabs through Chrome Apple Events. This requires Chrome’s JavaScript-from-Apple-Events setting. It starts checking Chrome after you choose **Player → Enable YouTube Music** from the menu bar icon. Enabling that Chrome setting is broader than a per-site permission, although this application's bridge restricts its page commands to the YouTube Music HTTPS origin.
 
 The current Apple silicon Music Only and Music + System Stats builds animate their bars from playback state. The Intel edition and the original installers support optional system audio analysis. The audio analysis uses a Core Audio process tap and processes samples in memory without saving or uploading audio. The application does not change the user's Music route independently of the Mac's output selection.
 

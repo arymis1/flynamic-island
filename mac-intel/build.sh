@@ -31,7 +31,7 @@ PLIST
 /usr/libexec/PlistBuddy -c 'Set :NSAudioCaptureUsageDescription FLYnamic Island analyzes the selected Spotify or Apple Music audio to animate live level bars. Audio is never saved or uploaded.' "$bundle/Contents/Info.plist" 2>/dev/null || /usr/libexec/PlistBuddy -c 'Add :NSAudioCaptureUsageDescription string FLYnamic Island analyzes the selected Spotify or Apple Music audio to animate live level bars. Audio is never saved or uploaded.' "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :NSAppleEventsUsageDescription FLYnamic Island shows the current song and controls playback in Spotify or Apple Music.' "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString 1.3' "$bundle/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 26' "$bundle/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 27' "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Delete :NSLocationUsageDescription' "$bundle/Contents/Info.plist" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Delete :NSLocationWhenInUseUsageDescription' "$bundle/Contents/Info.plist" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c 'Set :CFBundleName FLYnamic Island' "$bundle/Contents/Info.plist"

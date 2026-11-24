@@ -942,11 +942,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = Self.menuBarIcon
         let menu = NSMenu()
-        menu.addItem(withTitle: "Show / hide island", action: #selector(toggleVisibility), keyEquivalent: "")
-        menu.addItem(withTitle: "Keep expanded", action: #selector(togglePin), keyEquivalent: "")
-        menu.addItem(withTitle: "Open player", action: #selector(openMusic), keyEquivalent: "")
+        menu.addItem(withTitle: "Hide Island", action: #selector(toggleVisibility), keyEquivalent: "")
+        menu.addItem(withTitle: "Keep Expanded", action: #selector(togglePin), keyEquivalent: "")
+        menu.addItem(withTitle: "Open Apple Music", action: #selector(openMusic), keyEquivalent: "")
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit FLYnamic Island", action: #selector(quit), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit Flynamic Island", action: #selector(quit), keyEquivalent: "q")
         for entry in menu.items { entry.target = self }
         item.menu = menu
         menu.delegate = self
@@ -1031,9 +1031,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     @objc func openMusic() { music.openMusic() }
     func menuNeedsUpdate(_ menu: NSMenu) {
-        for entry in menu.items where entry.action == #selector(toggleVisibility) || entry.action == #selector(togglePin) {
-            entry.isEnabled = music.isMusicRunning
+        if let visibility = menu.items.first(where: { $0.action == #selector(toggleVisibility) }) {
+            visibility.title = hidden ? "Show Island" : "Hide Island"
+            visibility.isEnabled = music.isMusicRunning
         }
+        if let pin = menu.items.first(where: { $0.action == #selector(togglePin) }) {
+            pin.state = island.pinned ? .on : .off
+            pin.isEnabled = music.isMusicRunning
+        }
+        menu.items.first(where: { $0.action == #selector(openMusic) })?.title = "Open \(music.source.title)"
     }
     @objc func quit() { NSApp.terminate(nil) }
     @objc func displayChanged() { resize(island.expanded, animate: false) }

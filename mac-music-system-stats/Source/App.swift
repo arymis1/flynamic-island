@@ -1303,15 +1303,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = Self.menuBarIcon
         let menu = NSMenu()
-        menu.addItem(withTitle: "Show / hide island", action: #selector(toggleVisibility), keyEquivalent: "")
-        menu.addItem(withTitle: "Keep expanded", action: #selector(togglePin), keyEquivalent: "")
-        menu.addItem(withTitle: "Open player", action: #selector(openMusic), keyEquivalent: "")
+        menu.addItem(withTitle: "Hide Island", action: #selector(toggleVisibility), keyEquivalent: "")
+        menu.addItem(withTitle: "Keep Expanded", action: #selector(togglePin), keyEquivalent: "")
         let player = NSMenuItem(title: "Player", action: nil, keyEquivalent: "")
         player.submenu = NSMenu(title: "Player")
         menu.addItem(player)
-        menu.addItem(withTitle: "Enable YouTube Music…", action: #selector(setupYouTubeMusic), keyEquivalent: "")
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit FLYnamic Island", action: #selector(quit), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit Flynamic Island", action: #selector(quit), keyEquivalent: "q")
         for entry in menu.items { entry.target = self }
         item.menu = menu
         menu.delegate = self
@@ -1438,46 +1436,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     @objc private func setupYouTubeMusic() { music.setupYouTubeMusic() }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
-        if let submenu = menu.item(withTitle: "Player")?.submenu {
-            submenu.removeAllItems()
-            let automatic = submenu.addItem(withTitle: "Automatic", action: #selector(choosePlayer(_:)), keyEquivalent: "")
-            automatic.target = self
-            automatic.state = music.preferredSource == nil ? .on : .off
-            for source in MediaSource.allCases where music.availableSources.contains(source) {
-                let player = submenu.addItem(withTitle: source.title, action: #selector(choosePlayer(_:)), keyEquivalent: "")
-                player.target = self
-                player.representedObject = source.rawValue
-                player.state = music.preferredSource == source ? .on : .off
-            }
-            if music.youtubeEnabled {
-                submenu.addItem(.separator())
-                let disable = submenu.addItem(withTitle: "Disable YouTube Music", action: #selector(disableYouTubeMusic), keyEquivalent: "")
-                disable.target = self
-            }
+        menu.items.first(where: { $0.action == #selector(toggleVisibility) })?.title = hidden ? "Show Island" : "Hide Island"
+        menu.items.first(where: { $0.action == #selector(togglePin) })?.state = island.pinned ? .on : .off
+        guard let submenu = menu.item(withTitle: "Player")?.submenu else { return }
+
+        submenu.removeAllItems()
+        let automatic = submenu.addItem(withTitle: "Automatic", action: #selector(choosePlayer(_:)), keyEquivalent: "")
+        automatic.target = self
+        automatic.state = music.preferredSource == nil ? .on : .off
+        for source in MediaSource.allCases where music.availableSources.contains(source) {
+            let player = submenu.addItem(withTitle: source.title, action: #selector(choosePlayer(_:)), keyEquivalent: "")
+            player.target = self
+            player.representedObject = source.rawValue
+            player.state = music.preferredSource == source ? .on : .off
         }
-        if let setup = menu.items.first(where: { $0.action == #selector(setupYouTubeMusic) }) {
+
+        submenu.addItem(.separator())
+        // The setup action already opens YouTube Music when Chrome is idle or closed.
+        if music.source != .youtubeMusic || !music.youtubeEnabled || music.chromeStatus == "track" {
+            let open = submenu.addItem(withTitle: "Open \(music.source.title)", action: #selector(openMusic), keyEquivalent: "")
+            open.target = self
+        }
+        if !music.youtubeEnabled || music.chromeStatus != "track" {
             let title: String
             switch (music.youtubeEnabled, music.chromeStatus) {
             case (false, _): title = "Enable YouTube Music…"
-            case (true, "track"): title = "YouTube Music connected"
-            case (true, "closed"): title = "Open YouTube Music in Chrome"
-            case (true, "idle"): title = "Open a song in YouTube Music"
+            case (true, "closed"), (true, "idle"): title = "Open YouTube Music"
             case (true, "permission"): title = "Allow Chrome Automation…"
-            case (true, "denied"), (true, "permission-pending"): title = "Open Chrome Automation Settings…"
-            case (true, "permission-wait"): title = "Waiting for Chrome permission…"
-            case (true, "chrome-setting"): title = "Chrome needs JavaScript from Apple Events"
+            case (true, "denied"), (true, "permission-pending"): title = "Open Automation Settings…"
+            case (true, "permission-wait"): title = "Waiting for Chrome Permission…"
+            case (true, "chrome-setting"): title = "Enable JavaScript from Apple Events in Chrome"
             case (true, "connecting"): title = "Connecting to YouTube Music…"
-            default: title = "Retry YouTube Music connection"
+            default: title = "Retry YouTube Music"
             }
-            setup.title = title
+            let setup = submenu.addItem(withTitle: title, action: #selector(setupYouTubeMusic), keyEquivalent: "")
+            setup.target = self
         }
-        for entry in menu.items where entry.action == #selector(toggleVisibility) || entry.action == #selector(togglePin) {
-            entry.isEnabled = true
+        if music.youtubeEnabled {
+            let disable = submenu.addItem(withTitle: "Disable YouTube Music", action: #selector(disableYouTubeMusic), keyEquivalent: "")
+            disable.target = self
         }
     }
     @objc func validateMenuItem(_ item: NSMenuItem) -> Bool {
         guard item.action == #selector(setupYouTubeMusic), music.youtubeEnabled else { return true }
-        return !["track", "chrome-setting", "connecting", "permission-wait"].contains(music.chromeStatus)
+        return !["chrome-setting", "connecting", "permission-wait"].contains(music.chromeStatus)
     }
     @objc func quit() { NSApp.terminate(nil) }
     func applicationWillTerminate(_ notification: Notification) {
