@@ -4,9 +4,9 @@ Now-playing artwork and music controls at the top of your Mac’s screen.
 
 | Edition | Mac | Players | CPU/RAM | Download |
 | --- | --- | --- | --- | --- |
-| [Music Only](mac-music-only) | Apple silicon | Apple Music, Spotify | No | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build39/Flynamic-Island-Music-Only.dmg) |
-| [Music + Stats](mac-music-system-stats) | Apple silicon | Apple Music, Spotify, YouTube Music in Chrome | Yes | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build39/Flynamic-Island-Combined.dmg) |
-| [Intel](mac-intel) | Intel | Apple Music, Spotify | Yes | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build39/Flynamic-Island-Intel.dmg) |
+| [Music Only](mac-music-only) | Apple silicon | Apple Music, Spotify | No | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build40/Flynamic-Island-Music-Only.dmg) |
+| [Music + Stats](mac-music-system-stats) | Apple silicon | Apple Music, Spotify, YouTube Music in Chrome | Yes | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build40/Flynamic-Island-Combined.dmg) |
+| [Intel](mac-intel) | Intel | Apple Music, Spotify | Yes | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build40/Flynamic-Island-Intel.dmg) |
 
 ## Install
 

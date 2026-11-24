@@ -4,9 +4,9 @@ Requires macOS 14 or later.
 
 | Edition | Version / build | Download |
 | --- | --- | --- |
-| Music only, Apple silicon | 1.2 / 11 | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build39/Flynamic-Island-Music-Only.dmg) |
-| Music + Stats, Apple silicon | 1.4 / 39 | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build39/Flynamic-Island-Combined.dmg) |
-| Intel Mac Music + System Stats | 1.3 / 27 | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build39/Flynamic-Island-Intel.dmg) |
+| Music only, Apple silicon | 1.2 / 12 | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build40/Flynamic-Island-Music-Only.dmg) |
+| Music + Stats, Apple silicon | 1.4 / 40 | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build40/Flynamic-Island-Combined.dmg) |
+| Intel Mac Music + System Stats | 1.3 / 28 | [DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build40/Flynamic-Island-Intel.dmg) |
 
 The [release manifest](release-manifest.json) lists sizes and SHA-256 hashes for the original installers.
 

@@ -455,7 +455,8 @@ final class MusicModel: ObservableObject {
             }
         }
     }
-    func openMusic() {
+    func openMusic(_ player: MediaSource? = nil) {
+        let source = player ?? self.source
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: source.bundleIdentifier) else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: .init())
     }
@@ -944,7 +945,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let menu = NSMenu()
         menu.addItem(withTitle: "Hide Island", action: #selector(toggleVisibility), keyEquivalent: "")
         menu.addItem(withTitle: "Keep Expanded", action: #selector(togglePin), keyEquivalent: "")
-        menu.addItem(withTitle: "Open Apple Music", action: #selector(openMusic), keyEquivalent: "")
+        menu.addItem(withTitle: "Open Apple Music", action: #selector(openAppleMusic), keyEquivalent: "")
+        menu.addItem(withTitle: "Open Spotify", action: #selector(openSpotify), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Flynamic Island", action: #selector(quit), keyEquivalent: "q")
         for entry in menu.items { entry.target = self }
@@ -1029,7 +1031,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         UserDefaults.standard.set(island.pinned, forKey: "keepExpanded")
         if !island.pinned { resize(false) }
     }
-    @objc func openMusic() { music.openMusic() }
+    @objc private func openAppleMusic() { music.openMusic(.appleMusic) }
+    @objc private func openSpotify() { music.openMusic(.spotify) }
     func menuNeedsUpdate(_ menu: NSMenu) {
         if let visibility = menu.items.first(where: { $0.action == #selector(toggleVisibility) }) {
             visibility.title = hidden ? "Show Island" : "Hide Island"
@@ -1039,7 +1042,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             pin.state = island.pinned ? .on : .off
             pin.isEnabled = music.isMusicRunning
         }
-        menu.items.first(where: { $0.action == #selector(openMusic) })?.title = "Open \(music.source.title)"
     }
     @objc func quit() { NSApp.terminate(nil) }
     @objc func displayChanged() { resize(island.expanded, animate: false) }

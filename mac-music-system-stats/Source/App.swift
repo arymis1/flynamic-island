@@ -691,7 +691,8 @@ final class MusicModel: ObservableObject {
         NSWorkspace.shared.open([page], withApplicationAt: chrome,
                                 configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
     }
-    func openMusic() {
+    func openMusic(_ player: MediaSource? = nil) {
+        let source = player ?? self.source
         if source == .youtubeMusic {
             openYouTubeMusic()
             return
@@ -1428,7 +1429,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         UserDefaults.standard.set(island.pinned, forKey: "keepExpanded")
         if !island.pinned { resize(false) }
     }
-    @objc func openMusic() { music.openMusic() }
+    @objc private func openAppleMusic() { music.openMusic(.appleMusic) }
+    @objc private func openSpotify() { music.openMusic(.spotify) }
+    @objc private func openYouTubeMusic() { music.openMusic(.youtubeMusic) }
     @objc private func choosePlayer(_ item: NSMenuItem) {
         music.choosePlayer((item.representedObject as? String).flatMap(MediaSource.init(rawValue:)))
     }
@@ -1452,10 +1455,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         }
 
         submenu.addItem(.separator())
-        // The setup action already opens YouTube Music when Chrome is idle or closed.
-        if music.source != .youtubeMusic || !music.youtubeEnabled || music.chromeStatus == "track" {
-            let open = submenu.addItem(withTitle: "Open \(music.source.title)", action: #selector(openMusic), keyEquivalent: "")
-            open.target = self
+        submenu.addItem(withTitle: "Open Apple Music", action: #selector(openAppleMusic), keyEquivalent: "").target = self
+        submenu.addItem(withTitle: "Open Spotify", action: #selector(openSpotify), keyEquivalent: "").target = self
+        if music.chromeStatus == "track" {
+            submenu.addItem(withTitle: "Open YouTube Music", action: #selector(openYouTubeMusic), keyEquivalent: "").target = self
         }
         if !music.youtubeEnabled || music.chromeStatus != "track" {
             let title: String

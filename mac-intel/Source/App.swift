@@ -476,7 +476,8 @@ final class MusicModel: ObservableObject {
             }
         }
     }
-    func openMusic() {
+    func openMusic(_ player: MediaSource? = nil) {
+        let source = player ?? self.source
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: source.bundleIdentifier) else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: .init())
     }
@@ -1023,7 +1024,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let menu = NSMenu()
         menu.addItem(withTitle: "Hide Island", action: #selector(toggleVisibility), keyEquivalent: "")
         menu.addItem(withTitle: "Keep Expanded", action: #selector(togglePin), keyEquivalent: "")
-        menu.addItem(withTitle: "Open Apple Music", action: #selector(openMusic), keyEquivalent: "")
+        menu.addItem(withTitle: "Open Apple Music", action: #selector(openAppleMusic), keyEquivalent: "")
+        menu.addItem(withTitle: "Open Spotify", action: #selector(openSpotify), keyEquivalent: "")
         menu.addItem(withTitle: "Audio-reactive bars", action: #selector(toggleAudioBars), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Flynamic Island", action: #selector(quit), keyEquivalent: "q")
@@ -1147,7 +1149,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         UserDefaults.standard.set(island.pinned, forKey: "keepExpanded")
         if !island.pinned { resize(false) }
     }
-    @objc func openMusic() { music.openMusic() }
+    @objc private func openAppleMusic() { music.openMusic(.appleMusic) }
+    @objc private func openSpotify() { music.openMusic(.spotify) }
     @objc func toggleAudioBars() { music.visualizer.toggle() }
     func menuNeedsUpdate(_ menu: NSMenu) {
         if let visibility = menu.items.first(where: { $0.action == #selector(toggleVisibility) }) {
@@ -1156,7 +1159,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let pin = menu.items.first(where: { $0.action == #selector(togglePin) }) {
             pin.state = island.pinned ? .on : .off
         }
-        menu.items.first(where: { $0.action == #selector(openMusic) })?.title = "Open \(music.source.title)"
         for entry in menu.items where entry.action == #selector(toggleAudioBars) {
             entry.state = music.visualizer.enabled ? .on : .off
             entry.toolTip = music.visualizer.status

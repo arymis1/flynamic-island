@@ -1,6 +1,6 @@
 # Flynamic Island — Music + System Stats
 
-Apple Music, Spotify desktop, and YouTube Music in Chrome, with CPU/RAM stats and two-finger page swipe. Version 1.4, build 39. Apple silicon.
+Apple Music, Spotify desktop, and YouTube Music in Chrome, with CPU/RAM stats and two-finger page swipe. Version 1.4, build 40. Apple silicon.
 
 The compact bars animate when a song plays and settle into dots when paused. They use playback state and require no system audio capture. The expanded panel uses Liquid Glass on macOS 26 and later.
 
@@ -16,4 +16,4 @@ Choose **Player → Automatic** to follow playback or pick a connected player to
 
 ## Download
 
-[DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build39/Flynamic-Island-Combined.dmg) (version 1.4, build 39)
+[DMG](https://github.com/arymis1/flynamic-island/releases/download/mac-editions-2026-11-24-build40/Flynamic-Island-Combined.dmg) (version 1.4, build 40)
